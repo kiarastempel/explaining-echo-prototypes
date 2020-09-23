@@ -1,6 +1,4 @@
-import tensorflow as tf
 from tensorflow import keras
-
 
 
 class ThreeDConvolution(keras.Model):
@@ -9,19 +7,19 @@ class ThreeDConvolution(keras.Model):
         self.model = keras.Sequential(
             [
                 keras.layers.Conv3D(32, 3, activation='relu'),
-                keras.layers.MaxPool3D(pool_size=(1,2,2)),
+                keras.layers.MaxPool3D(pool_size=(1, 2, 2)),
                 keras.layers.Conv3D(32, 3, activation='relu'),
                 keras.layers.MaxPool3D(pool_size=(1, 2, 2)),
                 keras.layers.Conv3D(64, 3, activation='relu'),
                 keras.layers.Conv3D(64, 3, activation='relu'),
-                keras.layers.MaxPool3D(pool_size=(1,2,2)),
+                keras.layers.MaxPool3D(pool_size=(1, 2, 2)),
                 keras.layers.Conv3D(128, 3, activation='relu'),
-                keras.layers.Conv3D(128, 3,activation='relu'),
-                keras.layers.Conv3D(128, 3,activation='relu'),
-                keras.layers.MaxPool3D(pool_size=(2,2,2)),
-                keras.layers.Conv3D(256,3, activation='relu'),
-                keras.layers.Conv3D(256,3, activation='relu'),
-                keras.layers.Conv3D(256,3, activation='relu'),
+                keras.layers.Conv3D(128, 3, activation='relu'),
+                keras.layers.Conv3D(128, 3, activation='relu'),
+                keras.layers.MaxPool3D(pool_size=(2, 2, 2)),
+                keras.layers.Conv3D(256, 3, activation='relu'),
+                keras.layers.Conv3D(256, 3, activation='relu'),
+                keras.layers.Conv3D(256, 3, activation='relu'),
                 keras.layers.Flatten(),
                 keras.layers.Dense(2048, activation='relu'),
                 keras.layers.Dense(2048, activation='relu'),
@@ -29,7 +27,5 @@ class ThreeDConvolution(keras.Model):
             ]
         )
 
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         return self.model(inputs)
-
-
