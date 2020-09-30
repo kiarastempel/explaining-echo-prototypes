@@ -1,14 +1,18 @@
 from datetime import datetime
 from tensorflow import keras
 from models import three_D_convolution_net
+import tensorflow_addons as tfa
+import tensorflow as tf
 
 EPOCHS = 200
 
 
 def train():
     model = three_D_convolution_net.ThreeDConvolution()
+    opt = keras.optimizers.Adam(0.001)
+    opt = tfa.optimizers.SWA(opt, start_averaging=m, average_period=k)
     model.compile(
-        optimizer=keras.optimizers.Adam(lr=0.001),
+        optimizer=opt,
         loss=keras.losses.MSE(),
         metrics=keras.metrics.MSE()
     )
@@ -18,6 +22,9 @@ def train():
         keras.callbacks.ModelCheckpoint(filepath='../saved/three_d_conv_best_model.h5', save_best_only=True),
         keras.callbacks.TensorBoard(log_dir=log_dir)
     ]
+
+    echo_dataset = tf.data.TFRecordDataset()
+
     x_train = None
     x_val = None
     y_train = None
