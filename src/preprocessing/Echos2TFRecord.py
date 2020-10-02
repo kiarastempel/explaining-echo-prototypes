@@ -40,24 +40,33 @@ def generate_tf_record(input_directory, output_directory):
     validation_samples = file_list_data_frame[file_list_data_frame.Split == 'VAL'][['FileName', 'EF']]
     test_samples = file_list_data_frame[file_list_data_frame.Split == 'TEST'][['FileName', 'EF']]
 
-    create_tf_record(input_directory, output_directory, train_samples)
+    train_samples = train_samples.sample(frac=1)
+    test_samples = test_samples.sample(frac=1)
+    validation_samples = validation_samples.sample(frac=1)
+
+    create_tf_record(input_directory, output_directory / 'train.tfrecord', train_samples)
+    create_tf_record(input_directory, output_directory / 'validation.tfrecord', validation_samples)
+    create_tf_record(input_directory, output_directory / 'test.tfrecord', test_samples)
 
 
-def create_tf_record(input_directory, output_directory, train_samples):
-    with tf.io.TFRecordWriter(str(output_directory / 'test.tfrecord')) as writer:
+def create_tf_record(input_directory, output_file, train_samples):
+    with tf.io.TFRecordWriter(str(output_file)) as writer:
         for file_name, ejection_fraction in zip(train_samples.FileName, train_samples.EF):
             video = load_video(str(input_directory / 'Videos' / file_name))
-            example = serialise_example(video, ejection_fraction)
-            writer.write(example)
+            writer.write(serialise_example(video, ejection_fraction))
 
 
 def load_video(file_name):
     video = cv2.VideoCapture(file_name)
     frame_list = []
+    needed_frames = 50
     frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    for i in range(frame_count):
+    if frame_count < 50:
+        needed_frames = frame_count
+
+    for i in range(needed_frames):
         ret, frame = video.read()
         frame_list.append(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
     video.release()
