@@ -5,6 +5,7 @@ import numpy as np
 import pathlib
 import pandas
 import cv2
+import json
 
 
 def main(argv):
@@ -44,16 +45,50 @@ def generate_tf_record(input_directory, output_directory):
     test_samples = test_samples.sample(frac=1)
     validation_samples = validation_samples.sample(frac=1)
 
-    create_tf_record(input_directory, output_directory / 'train.tfrecord', train_samples)
-    create_tf_record(input_directory, output_directory / 'validation.tfrecord', validation_samples)
-    create_tf_record(input_directory, output_directory / 'test.tfrecord', test_samples)
+    train_folder = output_directory / 'train'
+    test_folder = output_directory / 'test'
+    validation_folder = output_directory / 'validation'
+    test_folder.mkdir(parents=True, exist_ok=True)
+    train_folder.mkdir(exist_ok=True)
+    validation_folder.mkdir(exist_ok=True)
+
+    fps, width, height = extract_metadata(train_samples.FileName[1], input_directory, output_directory)
+    save_metadata(output_directory, fps, width, height)
+    create_tf_record(input_directory, train_folder / 'train_{}.tfrecord', train_samples, fps, width, height)
+    create_tf_record(input_directory, test_folder / 'test_{}.tfrecord', validation_samples, fps, width, height)
+    create_tf_record(input_directory, validation_folder / 'validation_{}.tfrecord', test_samples, fps, width, height)
 
 
-def create_tf_record(input_directory, output_file, train_samples):
-    with tf.io.TFRecordWriter(str(output_file)) as writer:
-        for file_name, ejection_fraction in zip(train_samples.FileName, train_samples.EF):
-            video = load_video(str(input_directory / 'Videos' / file_name))
-            writer.write(serialise_example(video, ejection_fraction))
+def extract_metadata(file_name, input_directory, output_directory):
+    video = cv2.VideoCapture(str(input_directory / 'Videos' / file_name))
+    frames_per_second = int(video.get(cv2.CAP_PROP_FPS))
+    frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    return frames_per_second, frame_width, frame_height
+
+
+def save_metadata(output_directory, frames_per_second, frame_width, frame_height):
+    metadata = {'metadata': {
+        'frame_count': frames_per_second,
+        'frame_height': frame_height,
+        'frame_width': frame_width
+        }
+    }
+
+    with open(output_directory / 'metadata.json', 'w') as outfile:
+        json.dump(metadata, outfile)
+
+def create_tf_record(input_directory, output_file, train_samples, fps, width, height ):
+    file_limit = 10
+    chunk_size = int(len(train_samples) / file_limit)
+    for index in range(file_limit):
+        with tf.io.TFRecordWriter(str(output_file).format(index)) as writer:
+            start = index * chunk_size
+            for file_name, ejection_fraction in zip(train_samples.FileName[start: start + chunk_size],
+                                                    train_samples.EF[start: start + chunk_size]):
+                video = load_video(str(input_directory / 'Videos' / file_name))
+                if video is not None:
+                    writer.write(serialise_example(video, ejection_fraction, fps, width, height ))
 
 
 def load_video(file_name):
@@ -61,24 +96,23 @@ def load_video(file_name):
     frame_list = []
     needed_frames = 50
     frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-    frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    if frame_count < 50:
-        needed_frames = frame_count
+    if frame_count < needed_frames:
+        return None
 
     for i in range(needed_frames):
         ret, frame = video.read()
-        frame_list.append(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
+        frame_list.append(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).tobytes())
     video.release()
-    encoded_frames = [tf.compat.as_bytes(cv2.imencode(".jpg", frame)[1].tobytes())
-                      for frame in frame_list]
-    return encoded_frames
+    return frame_list
 
 
-def serialise_example(video, ejection_fraction):
+def serialise_example(video, ejection_fraction, fps, width, height):
     feature = {
-        'video': _bytes_list_feature(video),
-        'ejection_fraction': _float_feature(ejection_fraction)
+        'frames': _bytes_list_feature(video),
+        'ejection_fraction': _float_feature(ejection_fraction),
+        'fps': _int64_feature(fps),
+        'width': _int64_feature(width),
+        'height': _int64_feature(height)
     }
     example_proto = tf.train.Example(features=tf.train.Features(feature=feature))
     return example_proto.SerializeToString()
@@ -87,6 +121,11 @@ def serialise_example(video, ejection_fraction):
 def _float_feature(value):
     """Returns a float_list from a float / double."""
     return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
+
+
+def _int64_feature(value):
+  """Returns an int64_list from a bool / enum / int / uint."""
+  return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
 
 def _bytes_list_feature(values):
