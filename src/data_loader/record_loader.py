@@ -35,7 +35,7 @@ def parse_examples_batch(examples):
     width = parsed_examples['width']
     height = parsed_examples['height']
     number_of_frames = parsed_examples['fps']
-    batch = 2
+    batch = 64
     channels = 1
     frames = tf.io.decode_raw(parsed_examples['frames'], out_type=tf.uint8)
     frames = tf.cast(frames, tf.float32)

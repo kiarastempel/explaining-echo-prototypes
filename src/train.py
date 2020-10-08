@@ -34,7 +34,7 @@ def train():
         metadata = metadata_json['metadata']
         width = metadata['frame_width']
         height = metadata['frame_height']
-        number_of_frames = metadata['frames_per_second']
+        number_of_frames = metadata['frame_count']
     channels = 1
 
     model = three_D_convolution_net.ThreeDConvolution(width, height, number_of_frames, channels)
