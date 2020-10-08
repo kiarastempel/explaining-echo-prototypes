@@ -2,8 +2,8 @@ version: "3.5"
 services: 
     tensorflow-echo-dl:
         build: 
-            context: ../
-            dockerfile: docker/Dockerfile
+            context: .
+            dockerfile: Dockerfile
         image: tensorflow_echo_dl:1
         volumes:
             - ../logs:/logs

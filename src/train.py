@@ -1,3 +1,4 @@
+import getopt
 from datetime import datetime
 from tensorflow import keras
 from models import three_D_convolution_net
@@ -6,28 +7,32 @@ import tensorflow as tf
 from data_loader import record_loader
 from pathlib import Path
 import json
-import cv2
+import sys
 
 
 EPOCHS = 200
 
 
-def train():
+def main(argv):
+    batch_size = 32
+    try:
+        opts, args = getopt.getopt(argv, "b:", ["batch_size="])
+    except getopt.GetoptError:
+        print('test.py -b <batch_size>')
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt in ("-b", "--batch_size"):
+            batch_size = int(batch_size)
+    train(batch_size)
+
+
+def train(batch_size):
     data_folder = Path('../data/dynamic-echo-data/tf_record/')
     train_record_file_name = data_folder / 'train' / 'train_*.tfrecord'
     validation_record_file_name = data_folder / 'validation' / 'validation_*.tfrecord'
     metadata_path = data_folder / 'metadata.json'
-    train_set = record_loader.build_dataset(str(train_record_file_name))
-    validation_set = record_loader.build_dataset(str(validation_record_file_name))
-
-    # for sample in train_set.take(1):
-    #     pic = sample[0][0]
-    #     for frame in pic:
-    #         test = (frame.numpy())
-    #         cv2.namedWindow('dst_rt', cv2.WINDOW_NORMAL)
-    #         cv2.imshow('dst_rt', frame.numpy())
-    #         cv2.waitKey(0)
-    #     cv2.destroyAllWindows()
+    train_set = record_loader.build_dataset(str(train_record_file_name), batch_size)
+    validation_set = record_loader.build_dataset(str(validation_record_file_name), batch_size)
 
     with open(metadata_path) as metadata_file:
         metadata_json = json.load(metadata_file)
@@ -52,11 +57,10 @@ def train():
         keras.callbacks.TensorBoard(log_dir=log_dir)
     ]
 
-    batch_size = 64
     model.fit(train_set, epochs=EPOCHS, callbacks=callbacks, validation_data=validation_set,
               verbose=2)
 
 
 if __name__ == "__main__":
     # execute only if run as a script
-    train()
+    main(sys.argv[1:])

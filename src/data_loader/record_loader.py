@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 
-def build_dataset(file_names):
+def build_dataset(file_names, batch_size):
     AUTOTUNE = tf.data.experimental.AUTOTUNE
     return tf.data.Dataset.list_files(
         file_names
@@ -10,9 +10,9 @@ def build_dataset(file_names):
         cycle_length=AUTOTUNE,
         num_parallel_calls=AUTOTUNE
     ).shuffle(
-        2048
+        10030
     ).batch(
-        batch_size=64,
+        batch_size=batch_size,
         drop_remainder=True,
     ).map(
         map_func=parse_examples_batch,
@@ -35,7 +35,7 @@ def parse_examples_batch(examples):
     width = parsed_examples['width']
     height = parsed_examples['height']
     number_of_frames = parsed_examples['fps']
-    batch = 64
+    batch = 32
     channels = 1
     frames = tf.io.decode_raw(parsed_examples['frames'], out_type=tf.uint8)
     frames = tf.cast(frames, tf.float32)
