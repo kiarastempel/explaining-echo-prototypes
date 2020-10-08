@@ -1,9 +1,9 @@
-FROM tensorflow/tensorflow:2.0.0-gpu
+FROM tensorflow/tensorflow:2.0.0-gpu-py3
 
-RUN apt-get update && apt-get install --no-install-recommends --no-install-suggests python python3-pip -y
-COPY requirements.txt .
+RUN apt-get update && apt-get install --no-install-recommends --no-install-suggests python python3-pip libgl1-mesa-glx -y
 RUN pip3 install --upgrade pip
+COPY requirements.txt .
 RUN pip3 install -r requirements.txt
-
-COPY /src /src
+COPY src/ /src
 WORKDIR /src
+CMD python3 train.py 

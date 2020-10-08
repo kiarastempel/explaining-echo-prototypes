@@ -3,3 +3,4 @@ pydicom
 opencv-python
 pillow
 pandas
+tensorflow-addons==0.6.0
