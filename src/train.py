@@ -43,17 +43,17 @@ def train():
     model.compile(
         optimizer=opt,
         loss=keras.losses.MeanSquaredError(),
-        metrics=keras.metrics.MeanSquaredError()
+        metrics=[keras.metrics.MeanSquaredError()]
     )
     log_dir = Path("../logs", datetime.now().strftime("%Y%m%d-%H%M%S"))
     callbacks = [
         keras.callbacks.EarlyStopping(patience=20),
-        keras.callbacks.ModelCheckpoint(filepath='../saved/three_d_conv_best_model.h5', save_best_only=True),
+        keras.callbacks.ModelCheckpoint(filepath='../saved/three_d_conv_best_model.h5', monitor='val_mse', save_best_only=True),
         keras.callbacks.TensorBoard(log_dir=log_dir)
     ]
 
     batch_size = 64
-    model.fit(train_set, batch_size=batch_size, epochs=EPOCHS, callbacks=callbacks, validation_data=validation_set,
+    model.fit(train_set, epochs=EPOCHS, callbacks=callbacks, validation_data=validation_set,
               verbose=2)
 
 

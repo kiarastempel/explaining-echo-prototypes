@@ -8,3 +8,4 @@ services:
         volumes:
             - ../logs:/logs
             - ../data:/data
+            - ../src:/src

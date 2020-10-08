@@ -4,6 +4,4 @@ RUN apt-get update && apt-get install --no-install-recommends --no-install-sugge
 RUN pip3 install --upgrade pip
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
-COPY src/ /src
-WORKDIR /src
-CMD python3 train.py 
+ENTRYPOINT  ["python3", "src/train.py"]
