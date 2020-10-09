@@ -5,6 +5,7 @@ import numpy as np
 import pydicom as dicom
 from PIL import Image
 from pydicom.encaps import encapsulate
+from tqdm import tqdm
 
 
 def main():
@@ -12,7 +13,7 @@ def main():
     result_path = Path('../../data/processed')
     p = data_path.glob('**/*')
     video_paths = [x for x in p if x.is_file()]
-    for video_path in video_paths:
+    for video_path in tqdm(video_paths):
         make_video(video_path, result_path)
 
 
