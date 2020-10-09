@@ -4,4 +4,6 @@ RUN apt-get update && apt-get install --no-install-recommends --no-install-sugge
 RUN pip3 install --upgrade pip
 COPY requirements_docker.txt .
 RUN pip3 install -r requirements.txt
-ENTRYPOINT  ["python3", "src/train.py"]
+WORKDIR /src
+ENTRYPOINT  ["python3"]
+CMD ["train.py"]

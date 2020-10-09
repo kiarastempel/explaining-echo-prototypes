@@ -4,3 +4,4 @@ opencv-python
 pillow~=7.2.0
 pandas~=1.1.2
 tensorflow-addons==0.6.0
+tqdm

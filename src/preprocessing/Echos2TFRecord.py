@@ -6,6 +6,7 @@ import pathlib
 import pandas
 import cv2
 import json
+from tqdm import tqdm
 
 
 def main(argv):
@@ -45,6 +46,9 @@ def generate_tf_record(input_directory, output_directory):
     test_samples = test_samples.sample(frac=1)
     validation_samples = validation_samples.sample(frac=1)
 
+    number_of_train_samples = len(train_samples)
+    number_of_validation_samples = len(validation_samples)
+    number_of_test_samples = len(test_samples)
     train_folder = output_directory / 'train'
     test_folder = output_directory / 'test'
     validation_folder = output_directory / 'validation'
@@ -53,9 +57,15 @@ def generate_tf_record(input_directory, output_directory):
     validation_folder.mkdir(exist_ok=True)
 
     fps, width, height = extract_metadata(train_samples.FileName[1], input_directory, output_directory)
-    save_metadata(output_directory, fps, width, height)
+    save_metadata(output_directory, fps, width, height, number_of_test_samples, number_of_train_samples,
+                  number_of_validation_samples)
+    print('Create train record.')
     create_tf_record(input_directory, train_folder / 'train_{}.tfrecord', train_samples, fps, width, height)
+
+    print('Create test record.')
     create_tf_record(input_directory, test_folder / 'test_{}.tfrecord', validation_samples, fps, width, height)
+
+    print('Create validation record.')
     create_tf_record(input_directory, validation_folder / 'validation_{}.tfrecord', test_samples, fps, width, height)
 
 
@@ -67,21 +77,26 @@ def extract_metadata(file_name, input_directory, output_directory):
     return frames_per_second, frame_width, frame_height
 
 
-def save_metadata(output_directory, frames_per_second, frame_width, frame_height):
+def save_metadata(output_directory, frames_per_second, frame_width, frame_height, number_of_test_samples,
+                  number_of_train_samples, number_of_validation_samples):
     metadata = {'metadata': {
         'frame_count': frames_per_second,
         'frame_height': frame_height,
-        'frame_width': frame_width
+        'frame_width': frame_width,
+        'number_of_test_samples': number_of_test_samples,
+        'number_of_train_samples': number_of_train_samples,
+        'number_of_validation_samples': number_of_validation_samples
         }
     }
 
     with open(output_directory / 'metadata.json', 'w') as outfile:
         json.dump(metadata, outfile)
 
+
 def create_tf_record(input_directory, output_file, train_samples, fps, width, height ):
     file_limit = 10
     chunk_size = int(len(train_samples) / file_limit)
-    for index in range(file_limit):
+    for index in tqdm(range(file_limit)):
         with tf.io.TFRecordWriter(str(output_file).format(index)) as writer:
             start = index * chunk_size
             for file_name, ejection_fraction in zip(train_samples.FileName[start: start + chunk_size],

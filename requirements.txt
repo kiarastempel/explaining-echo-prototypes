@@ -5,3 +5,4 @@ pillow~=7.2.0
 pandas~=1.1.2
 tensorflow-addons
 tensorflow~=2.2.0
+tqdm~=4.50.0
