@@ -55,19 +55,21 @@ def train(batch_size, shuffle_size, epochs):
     # opt = tfa.optimizers.SWA(opt, start_averaging=m, average_period=k)
     model.compile(
         optimizer=opt,
-        loss=keras.losses.MeanSquaredError(),
-        metrics=[keras.metrics.MeanSquaredError()]
-    )
+        loss='mse',
+        metrics=['mae'])
+
+    Path("../logs").mkdir(exist_ok=True)
     log_dir = Path("../logs", datetime.now().strftime("%Y%m%d-%H%M%S"))
+    Path("../saved").mkdir(exist_ok=True)
     callbacks = [
-        keras.callbacks.EarlyStopping(patience=20),
-        keras.callbacks.ModelCheckpoint(filepath='../saved/three_d_conv_best_model.h5', monitor='val_mse',
+        keras.callbacks.EarlyStopping(patience=20, monitor = 'val_loss'),
+        keras.callbacks.ModelCheckpoint(filepath='../saved/three_d_conv_best_model.h5', monitor='val_loss',
                                         save_best_only=True),
         keras.callbacks.TensorBoard(log_dir=log_dir)
     ]
 
     model.fit(train_set, epochs=epochs, callbacks=callbacks, validation_data=validation_set,
-              verbose=2)
+              verbose=1)
 
 
 if __name__ == "__main__":

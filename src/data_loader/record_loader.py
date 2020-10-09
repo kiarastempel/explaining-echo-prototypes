@@ -17,7 +17,6 @@ def build_dataset(file_names, batch_size, shuffle_size):
     ).map(
         map_func=parse_examples_batch,
         num_parallel_calls=AUTOTUNE
-    ).cache(
     ).prefetch(AUTOTUNE
                )
 
