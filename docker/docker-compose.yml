@@ -9,5 +9,5 @@ services:
             - ../logs:/logs
             - ../data:/data
             - ../src:/src
-        command: train.py -b 16 -s 1000 -e 200
-        user: $USER:$USER
+        command: python train.py -b 16 -s 1000 -e 200
+        user: tensorflow:tensorflow
