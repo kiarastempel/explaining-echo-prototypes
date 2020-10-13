@@ -57,7 +57,7 @@ def train(batch_size, shuffle_size, epochs, patience):
     validation_set = record_loader.build_dataset(str(validation_record_file_name), batch_size, shuffle_size)
 
 
-    model = three_D_convolution_net.ThreeDConvolution_Stanford(width, height, number_of_frames, channels)
+    model = three_D_convolution_net.ThreeDConvolution_Stanford(width, height, number_of_frames, channels, mean, std)
     opt = keras.optimizers.Adam(0.001)
     # opt = tfa.optimizers.SWA(opt, start_averaging=m, average_period=k)
     model.compile(
