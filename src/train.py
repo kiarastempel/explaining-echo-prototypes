@@ -8,29 +8,33 @@ from data_loader import record_loader
 from pathlib import Path
 import json
 import sys
+import cv2
 
 
 def main(argv):
     batch_size = 32
     shuffle_size = 1000
     epochs = 200
+    patience = 20
 
     try:
-        opts, args = getopt.getopt(argv, "b:s:e:", ["batch_size=", "shuffle_size=", "epochs="])
+        opts, args = getopt.getopt(argv, "b:s:e:p:", ["batch_size=", "shuffle_size=", "epochs=", "patience="], )
     except getopt.GetoptError:
         print('train.py -b <batch_size> -s <shuffle_size> -e <epochs>')
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-b", "--batch_size"):
             batch_size = int(arg)
-        if opt in ("-s", "--shuffle_size"):
+        elif opt in ("-s", "--shuffle_size"):
             shuffle_size = int(arg)
-        if opt in ("-r", "--epochs"):
+        elif opt in ("-r", "--epochs"):
             epochs = int(arg)
-    train(batch_size, shuffle_size, epochs)
+        elif opt in ("-p", "--patience"):
+            patience = int(arg)
+    train(batch_size, shuffle_size, epochs, patience)
 
 
-def train(batch_size, shuffle_size, epochs):
+def train(batch_size, shuffle_size, epochs, patience):
     data_folder = Path('../data/dynamic-echo-data/tf_record/')
     train_record_file_name = data_folder / 'train' / 'train_*.tfrecord'
     validation_record_file_name = data_folder / 'validation' / 'validation_*.tfrecord'
@@ -45,10 +49,19 @@ def train(batch_size, shuffle_size, epochs):
         number_of_test_samples = metadata['number_of_test_samples']
         number_of_train_samples = metadata['number_of_train_samples']
         number_of_validation_samples = metadata['number_of_validation_samples']
-    channels = 1
+        mean = metadata_file['mean']
+        std = metadata_file['std']
+        channels = metadata_file['channels']
 
     train_set = record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size)
     validation_set = record_loader.build_dataset(str(validation_record_file_name), batch_size, shuffle_size)
+
+    for sample in train_set.take(1):
+        pic = sample[0][0]
+        for frame in pic:
+            cv2.imshow('dst_rt', frame.numpy())
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
     model = three_D_convolution_net.ThreeDConvolution_Stanford(width, height, number_of_frames, channels)
     opt = keras.optimizers.Adam(0.001)
@@ -62,14 +75,14 @@ def train(batch_size, shuffle_size, epochs):
     log_dir = Path("../logs", datetime.now().strftime("%Y%m%d-%H%M%S"))
     Path("../saved").mkdir(exist_ok=True)
     callbacks = [
-        keras.callbacks.EarlyStopping(patience=20, monitor = 'val_loss'),
+        keras.callbacks.EarlyStopping(patience=patience, monitor='val_loss'),
         keras.callbacks.ModelCheckpoint(filepath='../saved/three_d_conv_best_model.h5', monitor='val_loss',
                                         save_best_only=True),
         keras.callbacks.TensorBoard(log_dir=log_dir)
     ]
 
     model.fit(train_set, epochs=epochs, callbacks=callbacks, validation_data=validation_set,
-              verbose=1)
+              verbose=2)
 
 
 if __name__ == "__main__":

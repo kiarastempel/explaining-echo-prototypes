@@ -10,3 +10,4 @@ services:
             - ../data:/data
             - ../src:/src
         command: train.py -b 16 -s 1000 -e 200
+        user: $USER:$USER
