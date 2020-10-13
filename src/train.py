@@ -56,12 +56,6 @@ def train(batch_size, shuffle_size, epochs, patience):
     train_set = record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size)
     validation_set = record_loader.build_dataset(str(validation_record_file_name), batch_size, shuffle_size)
 
-    for sample in train_set.take(1):
-        pic = sample[0][0]
-        for frame in pic:
-            cv2.imshow('dst_rt', frame.numpy())
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
 
     model = three_D_convolution_net.ThreeDConvolution_Stanford(width, height, number_of_frames, channels)
     opt = keras.optimizers.Adam(0.001)
