@@ -49,9 +49,9 @@ def train(batch_size, shuffle_size, epochs, patience):
         number_of_test_samples = metadata['number_of_test_samples']
         number_of_train_samples = metadata['number_of_train_samples']
         number_of_validation_samples = metadata['number_of_validation_samples']
-        mean = metadata_file['mean']
-        std = metadata_file['std']
-        channels = metadata_file['channels']
+        mean = metadata['mean']
+        std = metadata['std']
+        channels = metadata['channels']
 
     train_set = record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size)
     validation_set = record_loader.build_dataset(str(validation_record_file_name), batch_size, shuffle_size)
