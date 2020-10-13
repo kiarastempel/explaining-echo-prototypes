@@ -8,7 +8,6 @@ from data_loader import record_loader
 from pathlib import Path
 import json
 import sys
-import cv2
 
 
 def main(argv):
@@ -55,7 +54,6 @@ def train(batch_size, shuffle_size, epochs, patience):
 
     train_set = record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size)
     validation_set = record_loader.build_dataset(str(validation_record_file_name), batch_size, shuffle_size)
-
 
     model = three_D_convolution_net.ThreeDConvolution_Stanford(width, height, number_of_frames, channels, mean, std)
     opt = keras.optimizers.Adam(0.001)
