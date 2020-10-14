@@ -52,17 +52,13 @@ def train(batch_size, shuffle_size, epochs, patience):
         std = metadata['std']
         channels = metadata['channels']
 
-    mirrored_strategy = tf.distribute.MirroredStrategy()
-    global_batch_size = (batch_size *
-                         mirrored_strategy.num_replicas_in_sync)
-    train_set = record_loader.build_dataset(str(train_record_file_name), global_batch_size, shuffle_size)
-    validation_set = record_loader.build_dataset(str(validation_record_file_name), global_batch_size, shuffle_size)
+    train_set = record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size)
+    validation_set = record_loader.build_dataset(str(validation_record_file_name), batch_size, shuffle_size)
 
-    with mirrored_strategy.scope():
-        model = three_D_convolution_net.ThreeDConvolution_Stanford(width, height, number_of_frames, channels, mean, std)
-        opt = keras.optimizers.Adam(0.001)
-        # opt = tfa.optimizers.SWA(opt, start_averaging=m, average_period=k)
-        model.compile(optimizer=opt, loss='mse', metrics=['mae'])
+    model = three_D_convolution_net.ThreeDConvolution_Stanford(width, height, number_of_frames, channels, mean, std)
+    opt = keras.optimizers.Adam(0.001)
+    # opt = tfa.optimizers.SWA(opt, start_averaging=m, average_period=k)
+    model.compile(optimizer=opt, loss='mse', metrics=['mae'])
 
     Path("../logs").mkdir(exist_ok=True)
     log_dir = Path("../logs", datetime.now().strftime("%Y%m%d-%H%M%S"))
