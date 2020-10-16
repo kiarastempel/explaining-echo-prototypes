@@ -52,7 +52,7 @@ def train(batch_size, shuffle_size, epochs, patience):
         std = metadata['std']
         channels = metadata['channels']
 
-    train_set = record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size)
+    train_set = record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size, augment=True)
     validation_set = record_loader.build_dataset(str(validation_record_file_name), batch_size, shuffle_size)
 
     model = three_D_convolution_net.ThreeDConvolution_Stanford(width, height, number_of_frames, channels, mean, std)

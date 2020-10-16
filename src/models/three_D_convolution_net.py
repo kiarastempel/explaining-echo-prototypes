@@ -5,18 +5,12 @@ class ThreeDConvolution_Stanford(keras.Model):
     def __init__(self, width, height, frames, channels, mean, std):
         super(ThreeDConvolution_Stanford, self).__init__()
 
-        data_augmentation = keras.Sequential(
-            [
-
-            ]
-        )
-
         input_shape = (frames, width, height, channels)
         self.model = keras.Sequential(
             [
                 keras.layers.experimental.preprocessing.Rescaling(scale=1 / std, offset=-mean/std, input_shape=input_shape),
                 keras.layers.Conv3D(32, 3, activation='relu'),
-                # data_augmentation,
+                data_augmentation,
                 keras.layers.MaxPool3D(pool_size=(1, 2, 2)),
                 keras.layers.Conv3D(32, 3, activation='relu'),
                 keras.layers.MaxPool3D(pool_size=(1, 2, 2)),
@@ -26,7 +20,7 @@ class ThreeDConvolution_Stanford(keras.Model):
                 keras.layers.Conv3D(128, 3, activation='relu'),
                 keras.layers.Conv3D(128, 3, activation='relu'),
                 keras.layers.Conv3D(128, 3, activation='relu'),
-                #keras.layers.MaxPool3D(pool_size=(2, 2, 2)),
+                keras.layers.MaxPool3D(pool_size=(2, 1, 1)),
                 #keras.layers.Conv3D(256, 3, activation='relu'),
                 keras.layers.Conv3D(256, 3, activation='relu'),
                 keras.layers.Conv3D(256, 3, activation='relu'),
