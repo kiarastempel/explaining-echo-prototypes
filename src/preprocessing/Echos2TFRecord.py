@@ -40,7 +40,6 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
     tf.random.set_seed(5)
     np.random.seed(5)
 
-    needed_frames = 50
     # load videos and file_list and put into tfrecord
     file_list_data_frame = pandas.read_csv(input_directory / 'FileList.csv')
     train_samples = file_list_data_frame[file_list_data_frame.Split == 'TRAIN'][['FileName', 'EF']]
@@ -61,22 +60,18 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
     fps, width, height = extract_metadata(train_samples.FileName[1], input_directory)
 
     print('Calculate mean and standard deviation.')
-    mean, std = calculate_train_mean_and_std(input_directory, train_samples.FileName, needed_frames,
-                                             standardisation_sample)
+    mean, std = calculate_train_mean_and_std(input_directory, train_samples.FileName, standardisation_sample)
     print('Create train record.')
     number_of_train_samples = create_tf_record(input_directory, train_folder / 'train_{}.tfrecord', train_samples, fps,
-                                               width, height,
-                                               needed_frames)
+                                               width, height,)
 
     print('Create test record.')
     number_of_test_samples = create_tf_record(input_directory, test_folder / 'test_{}.tfrecord', validation_samples,
-                                              fps, width, height,
-                                              needed_frames)
+                                              fps, width, height,)
 
     print('Create validation record.')
     number_of_validation_samples = create_tf_record(input_directory, validation_folder / 'validation_{}.tfrecord',
-                                                    test_samples, fps, width, height,
-                                                    needed_frames)
+                                                    test_samples, fps, width, height,)
 
     save_metadata(output_directory, fps, width, height, mean, std, number_of_test_samples, number_of_train_samples,
                   number_of_validation_samples)
@@ -118,21 +113,19 @@ def create_tf_record(input_directory, output_file, samples, fps, width, height, 
             start = index * chunk_size
             for file_name, ejection_fraction in zip(samples.FileName[start: start + chunk_size],
                                                     samples.EF[start: start + chunk_size]):
-                video = load_video(str(input_directory / 'Videos' / file_name), needed_frames)
+                video = load_video(str(input_directory / 'Videos' / file_name))
                 if video is not None:
                     number_used_videos += 1
                     writer.write(serialise_example(video, ejection_fraction, fps, width, height))
     return number_used_videos
 
 
-def load_video(file_name, needed_frames=50):
+def load_video(file_name):
     video = cv2.VideoCapture(file_name)
     frame_list = []
     frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-    if frame_count < needed_frames:
-        return None
 
-    for _ in range(needed_frames):
+    for _ in range(frame_count):
         ret, frame = video.read()
         if frame.shape[2] > 1:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -147,13 +140,14 @@ def serialise_example(video, ejection_fraction, fps, width, height):
         'ejection_fraction': _float_feature(ejection_fraction),
         'fps': _int64_feature(fps),
         'width': _int64_feature(width),
-        'height': _int64_feature(height)
+        'height': _int64_feature(height),
+        'number_of_frames': _int64_feature(len(video))
     }
     example_proto = tf.train.Example(features=tf.train.Features(feature=feature))
     return example_proto.SerializeToString()
 
 
-def calculate_train_mean_and_std(input_directory, file_names, needed_frames, standardisation_sample):
+def calculate_train_mean_and_std(input_directory, file_names, standardisation_sample):
     n = 0
     mean = 0
     M2 = 0
@@ -163,9 +157,7 @@ def calculate_train_mean_and_std(input_directory, file_names, needed_frames, sta
     for file_name in tqdm(filenames_to_use, file=sys.stdout):
         video = cv2.VideoCapture(str(input_directory / 'Videos' / file_name))
         frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-        if frame_count < needed_frames:
-            continue
-        for index in range(needed_frames):
+        for index in range(frame_count):
             ret, frame = video.read()
             if frame.shape[2] > 1:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
