@@ -15,11 +15,13 @@ def main(argv):
     shuffle_size = 1000
     epochs = 200
     patience = 20
+    learning_rate = 0.0008
 
     try:
-        opts, args = getopt.getopt(argv, "b:s:e:p:", ["batch_size=", "shuffle_size=", "epochs=", "patience="], )
+        opts, args = getopt.getopt(argv, "b:s:e:p:l:", ["batch_size=", "shuffle_size=", "epochs=", "patience=",
+                                                        "learning_rate="])
     except getopt.GetoptError:
-        print('train.py -b <batch_size> -s <shuffle_size> -e <epochs>')
+        print('train.py -b <batch_size> -s <shuffle_size> -e <epochs> -e <epochs> -p <patience> -l <learning_rate>')
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-b", "--batch_size"):
@@ -30,10 +32,12 @@ def main(argv):
             epochs = int(arg)
         elif opt in ("-p", "--patience"):
             patience = int(arg)
-    train(batch_size, shuffle_size, epochs, patience)
+        elif opt in ("-l", "--learning_rate"):
+            learning_rate = float(arg)
+    train(batch_size, shuffle_size, epochs, patience, learning_rate)
 
 
-def train(batch_size, shuffle_size, epochs, patience):
+def train(batch_size, shuffle_size, epochs, patience, learning_rate):
     data_folder = Path('../data/dynamic-echo-data/tf_record/')
     train_record_file_name = data_folder / 'train' / 'train_*.tfrecord'
     validation_record_file_name = data_folder / 'validation' / 'validation_*.tfrecord'
@@ -56,7 +60,7 @@ def train(batch_size, shuffle_size, epochs, patience):
     validation_set = record_loader.build_dataset(str(validation_record_file_name), batch_size, shuffle_size)
 
     model = three_D_convolution_net.ThreeDConvolution_Stanford(width, height, number_of_frames, channels, mean, std)
-    opt = keras.optimizers.Adam(0.0008)
+    opt = keras.optimizers.Adam(learning_rate)
     # opt = tfa.optimizers.SWA(opt, start_averaging=m, average_period=k)
     model.compile(optimizer=opt, loss='mse', metrics=['mae'])
 
