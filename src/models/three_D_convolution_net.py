@@ -19,7 +19,7 @@ class ThreeDConvolution_Stanford(keras.Model):
                 #keras.layers.BatchNormalization(),
                 keras.layers.Conv3D(64, 3, activation='relu'),
                 #keras.layers.BatchNormalization(),
-                keras.layers.MaxPool3D(pool_size=(1, 2, 2)),
+                keras.layers.MaxPool3D(pool_size=(2, 2, 2)),
                 keras.layers.Conv3D(128, 3, activation='relu'),
                 #keras.layers.BatchNormalization(),
                 keras.layers.Conv3D(128, 3, activation='relu'),
