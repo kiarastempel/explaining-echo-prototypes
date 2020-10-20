@@ -140,8 +140,8 @@ def serialise_example(video, ejection_fraction, width, height):
         'frames': _bytes_list_feature(video),
         'ejection_fraction': _float_feature(ejection_fraction),
         'number_of_frames': _int64_feature(len(video)),
-        'width': width,
-        'height': height
+        'width': _int64_feature(width),
+        'height': _int64_feature(height)
     }
     example_proto = tf.train.Example(features=tf.train.Features(feature=feature))
     return example_proto.SerializeToString()
