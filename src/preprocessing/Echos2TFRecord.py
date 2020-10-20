@@ -59,22 +59,23 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
 
     fps, width, height = extract_metadata(train_samples.FileName[1], input_directory)
 
-    print('Calculate mean and standard deviation.')
-    mean, std = calculate_train_mean_and_std(input_directory, train_samples.FileName, standardisation_sample)
     print('Create train record.')
-    number_of_train_samples = create_tf_record(input_directory, train_folder / 'train_{}.tfrecord', train_samples, fps,
-                                               width, height,)
+    number_of_train_samples = create_tf_record(input_directory, train_folder / 'train_{}.tfrecord', train_samples,
+                                               width, height, )
 
     print('Create test record.')
     number_of_test_samples = create_tf_record(input_directory, test_folder / 'test_{}.tfrecord', validation_samples,
-                                              fps, width, height,)
+                                              width, height, )
 
     print('Create validation record.')
     number_of_validation_samples = create_tf_record(input_directory, validation_folder / 'validation_{}.tfrecord',
-                                                    test_samples, fps, width, height,)
+                                                    test_samples, width, height, )
 
-    save_metadata(output_directory, fps, width, height, mean, std, number_of_test_samples, number_of_train_samples,
-                  number_of_validation_samples)
+    if not (output_directory / 'metadata.json').is_file():
+        print('Calculate mean and standard deviation.')
+        mean, std = calculate_train_mean_and_std(input_directory, train_samples.FileName, standardisation_sample)
+        save_metadata(output_directory, fps, width, height, mean, std, number_of_test_samples, number_of_train_samples,
+                      number_of_validation_samples)
 
 
 def extract_metadata(file_name, input_directory):

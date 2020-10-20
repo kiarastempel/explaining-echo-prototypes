@@ -8,6 +8,7 @@ from data_loader import record_loader
 from pathlib import Path
 import json
 import sys
+import matplotlib.pyplot as plt
 
 
 def main(argv):
@@ -51,20 +52,18 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, input_frame
         metadata = metadata_json['metadata']
         width = metadata['frame_width']
         height = metadata['frame_height']
-        number_of_frames = metadata['frame_count']
         number_of_test_samples = metadata['number_of_test_samples']
         number_of_train_samples = metadata['number_of_train_samples']
         number_of_validation_samples = metadata['number_of_validation_samples']
         mean = metadata['mean']
         std = metadata['std']
         channels = metadata['channels']
-
     train_set = record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size, input_frames,
                                             split=True)
     validation_set = record_loader.build_dataset(str(validation_record_file_name), batch_size, shuffle_size,
                                                  input_frames)
 
-    model = three_D_convolution_net.ThreeDConvolution_Stanford(width, height, number_of_frames, channels, mean, std)
+    model = three_D_convolution_net.ThreeDConvolution_Stanford(width, height, input_frames, channels, mean, std)
     opt = keras.optimizers.Adam(learning_rate)
     # opt = tfa.optimizers.SWA(opt, start_averaging=m, average_period=k)
     model.compile(optimizer=opt, loss='mse', metrics=['mae'])
