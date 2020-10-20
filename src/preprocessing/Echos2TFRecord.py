@@ -88,7 +88,7 @@ def extract_metadata(file_name, input_directory):
 def save_metadata(output_directory, frames_per_second, frame_width, frame_height, mean, std, number_of_test_samples,
                   number_of_train_samples, number_of_validation_samples):
     metadata = {'metadata': {
-        'frame_count': frames_per_second,
+        'frames_per_second': frames_per_second,
         'frame_height': frame_height,
         'frame_width': frame_width,
         'number_of_test_samples': number_of_test_samples,
@@ -104,7 +104,7 @@ def save_metadata(output_directory, frames_per_second, frame_width, frame_height
         json.dump(metadata, outfile)
 
 
-def create_tf_record(input_directory, output_file, samples, fps, width, height, needed_frames=50):
+def create_tf_record(input_directory, output_file, samples, width, height, needed_frames=50):
     number_used_videos = 0
     file_limit = 10
     chunk_size = int(len(samples) / file_limit)
@@ -113,18 +113,19 @@ def create_tf_record(input_directory, output_file, samples, fps, width, height, 
             start = index * chunk_size
             for file_name, ejection_fraction in zip(samples.FileName[start: start + chunk_size],
                                                     samples.EF[start: start + chunk_size]):
-                video = load_video(str(input_directory / 'Videos' / file_name))
+                video = load_video(str(input_directory / 'Videos' / file_name), needed_frames)
                 if video is not None:
                     number_used_videos += 1
-                    writer.write(serialise_example(video, ejection_fraction, fps, width, height))
+                    writer.write(serialise_example(video, ejection_fraction, width, height))
     return number_used_videos
 
 
-def load_video(file_name):
+def load_video(file_name, needed_frames):
     video = cv2.VideoCapture(file_name)
     frame_list = []
     frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-
+    if needed_frames > frame_count:
+        return None
     for _ in range(frame_count):
         ret, frame = video.read()
         if frame.shape[2] > 1:
@@ -134,14 +135,13 @@ def load_video(file_name):
     return frame_list
 
 
-def serialise_example(video, ejection_fraction, fps, width, height):
+def serialise_example(video, ejection_fraction, width, height):
     feature = {
         'frames': _bytes_list_feature(video),
         'ejection_fraction': _float_feature(ejection_fraction),
-        'fps': _int64_feature(fps),
-        'width': _int64_feature(width),
-        'height': _int64_feature(height),
-        'number_of_frames': _int64_feature(len(video))
+        'number_of_frames': _int64_feature(len(video)),
+        'width': width,
+        'height': height
     }
     example_proto = tf.train.Example(features=tf.train.Features(feature=feature))
     return example_proto.SerializeToString()

@@ -15,6 +15,7 @@ def main(argv):
     shuffle_size = 1000
     epochs = 200
     patience = 20
+    input_frames = 50
     learning_rate = 0.0008
 
     try:
@@ -34,10 +35,12 @@ def main(argv):
             patience = int(arg)
         elif opt in ("-l", "--learning_rate"):
             learning_rate = float(arg)
-    train(batch_size, shuffle_size, epochs, patience, learning_rate)
+    train(batch_size, shuffle_size, epochs, patience, learning_rate, input_frames)
 
 
-def train(batch_size, shuffle_size, epochs, patience, learning_rate):
+def train(batch_size, shuffle_size, epochs, patience, learning_rate, input_frames):
+    tf.random.set_seed(5)
+
     data_folder = Path('../data/dynamic-echo-data/tf_record/')
     train_record_file_name = data_folder / 'train' / 'train_*.tfrecord'
     validation_record_file_name = data_folder / 'validation' / 'validation_*.tfrecord'
@@ -56,8 +59,10 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate):
         std = metadata['std']
         channels = metadata['channels']
 
-    train_set = record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size, augment=False)
-    validation_set = record_loader.build_dataset(str(validation_record_file_name), batch_size, shuffle_size)
+    train_set = record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size, input_frames,
+                                            split=True)
+    validation_set = record_loader.build_dataset(str(validation_record_file_name), batch_size, shuffle_size,
+                                                 input_frames)
 
     model = three_D_convolution_net.ThreeDConvolution_Stanford(width, height, number_of_frames, channels, mean, std)
     opt = keras.optimizers.Adam(learning_rate)
