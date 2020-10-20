@@ -61,7 +61,7 @@ def parse_and_augment_example(example, number_of_input_frames):
     frames = tf.io.decode_raw(raw_frames, out_type=tf.uint8)
     frames = tf.cast(frames, tf.float32)
     if number_of_input_frames == number_of_frames:
-        start = 0
+        start = tf.constant(0, dtype=tf.int64)
     else:
         start = tf.random.uniform(shape=[], maxval=number_of_frames - number_of_input_frames, dtype=tf.int64)
     subframes = frames[start: start + number_of_input_frames]
