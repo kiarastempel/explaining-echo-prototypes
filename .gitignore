@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 logs/
 saved/
-/data/
+/data
