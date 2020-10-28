@@ -2,7 +2,8 @@ import tensorflow as tf
 from tensorflow import keras
 
 
-def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, augment=False, split=False):
+def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, width, height, augment=False,
+                  split=False):
     data_augmentation = keras.Sequential(
         [
             keras.layers.experimental.preprocessing.RandomContrast(0.2),
@@ -17,9 +18,11 @@ def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, 
         .interleave(tf.data.TFRecordDataset, cycle_length=AUTOTUNE, num_parallel_calls=AUTOTUNE) \
         .shuffle(shuffle_size)
     if split:
-        ds = ds.map(lambda x: parse_and_augment_example(x, number_of_input_frames), num_parallel_calls=AUTOTUNE)
+        ds = ds.map(lambda x: parse_and_augment_example(x, number_of_input_frames, width, height),
+                    num_parallel_calls=AUTOTUNE)
     else:
-        ds = ds.map(lambda x: parse_example(x, number_of_input_frames), num_parallel_calls=AUTOTUNE)
+        ds = ds.map(lambda x: parse_example(x, number_of_input_frames, width, height),
+                    num_parallel_calls=AUTOTUNE)
     ds = ds.batch(batch_size=batch_size, drop_remainder=True)
     if augment:
         ds = ds.map(lambda x, y: (data_augmentation(x, training=True), y), num_parallel_calls=AUTOTUNE)
@@ -31,15 +34,11 @@ feature_description = {
         'frames': tf.io.VarLenFeature(dtype=tf.string),
         'ejection_fraction': tf.io.FixedLenFeature((), tf.float32),
         'number_of_frames': tf.io.FixedLenFeature((), tf.int64),
-        'width': tf.io.FixedLenFeature((), tf.int64),
-        'height': tf.io.FixedLenFeature((), tf.int64),
     }
 
 
-def parse_example(example, number_of_input_frames):
+def parse_example(example, number_of_input_frames, width, height):
     parsed_example = tf.io.parse_example(example, feature_description)
-    width = parsed_example['width']
-    height = parsed_example['height']
     channels = 1
     raw_frames = tf.sparse.to_dense(parsed_example['frames'])
     number_of_frames = parsed_example['number_of_frames']
@@ -50,11 +49,8 @@ def parse_example(example, number_of_input_frames):
     return frames, parsed_example['ejection_fraction']
 
 
-def parse_and_augment_example(example, number_of_input_frames):
-
+def parse_and_augment_example(example, number_of_input_frames, width, height):
     parsed_example = tf.io.parse_example(example, feature_description)
-    width = parsed_example['width']
-    height = parsed_example['height']
     channels = 1
     number_of_frames = parsed_example['number_of_frames']
     raw_frames = tf.sparse.to_dense(parsed_example['frames'])

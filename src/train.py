@@ -8,7 +8,6 @@ from data_loader import record_loader
 from pathlib import Path
 import json
 import sys
-import matplotlib.pyplot as plt
 
 
 def main(argv):
@@ -58,10 +57,10 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, input_frame
         mean = metadata['mean']
         std = metadata['std']
         channels = metadata['channels']
-    train_set = record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size, input_frames,
-                                            split=True)
+    train_set = record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size, input_frames, width,
+                                            height, split=True)
     validation_set = record_loader.build_dataset(str(validation_record_file_name), batch_size, shuffle_size,
-                                                 input_frames)
+                                                 input_frames, width, height)
 
     model = three_D_convolution_net.ThreeDConvolution_Stanford(width, height, input_frames, channels, mean, std)
     opt = keras.optimizers.Adam(learning_rate)

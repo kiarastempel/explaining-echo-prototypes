@@ -35,7 +35,6 @@ class ThreeDConvolution_Stanford(keras.Model):
                 keras.layers.Dense(2048, activation='relu'),
                 # keras.layers.BatchNormalization(),
                 keras.layers.Dense(2048, activation='relu'),
-                # keras.layers.BatchNormalization(),
                 keras.layers.Dense(1),
             ]
         )
