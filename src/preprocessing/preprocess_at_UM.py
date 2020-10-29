@@ -9,6 +9,9 @@ from pydicom.encaps import encapsulate
 from tqdm import tqdm
 import pyodbc
 import shutil
+import sqlserverport
+
+#sudo docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=ThatIsAPassword1234" -p 1433:1433 --name sql1 -h sql1 -d mcr.microsoft.com/mssql/server:2019-latest
 
 class CHandleDatabase:
 
@@ -19,10 +22,15 @@ class CHandleDatabase:
 
     # open database connection
     def connect_db(self):
-        server = 'GHSS-DBSERV\DEV'
-        database = 'SvensSpielwiese'
-        self.cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database + ';Trusted_Connection=yes', timeout=180)
+        server = '10.8.4.205'
+        database = 'DICOMConverter'
+       # port =  str(sqlserverport.lookup(server, 'DEV'))
+        port = "1433"
+
+        #self.cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database + ';User=yes', timeout=180)
+        self.cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';PORT='+port+';DATABASE=' + database + ';UID=sa;PWD=ThatIsAPassword1234', timeout=30)
         cursor = self.cnxn.cursor()
+        print("SQL DB conncted")
         return cursor
 
     def get_campusID(self, subdirname):
@@ -45,7 +53,7 @@ class CHandleDatabase:
         row = self._cursor.fetchone()
         if(row!=None):
             myoid = row.myoid.strip()
-            self._cursor.execute('SELECT id, done_converting FROM dbo.UUIDtoMYOID WHERE myoid=\''+myoid+'\'')
+            self._cursor.execute('SELECT id, done_converting FROM dbo.UUIDtoMYOID WHERE myoid=\''+myoid+'\' and done_converting=0')
             uidrow = self._cursor.fetchone()
             if(uidrow!=None):
                 return str(uidrow.id), myoid, uidrow.done_converting
@@ -78,12 +86,20 @@ def main():
     #result_path = Path(os.getcwd() +'/data/processed')
     #data_path = Path(os.getcwd() + '/data/raw')
 
-    result_path = Path('D:\processed')
-    data_path = Path('D:\Jul2020')
+
+    #result_path = Path('D:\processed')
+    #data_path = Path('D:\Jul2020')
+
+
+    result_path = Path('/home/tro2s/echoconverter/processed')
+    data_path = Path('/home/tro2s/xcelera_workerservice/dicoms/Aug/2020')
+
     p = data_path.glob('**/*')
 
     # Get all Subfolders of data_path
     subfolders = [e for e in data_path.iterdir() if e.is_dir()]
+    for folder in subfolders:
+        print(folder)
 
     #iterate through all paths
     for echofolder in tqdm(subfolders):
