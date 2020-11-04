@@ -5,18 +5,19 @@ import numpy as np
 import pathlib
 import pandas
 from tqdm import tqdm
-import preprocessing.Echos2TFRecord as echo_base
+import preprocessing.echos_to_tf_record as echo_base
 
 
 def main(argv):
     input_directory = ''
-    output_directory = ''
+    output_directory = None
     standardisation_sample = None
     found_input = False
-    found_output = False
+    found_metadata_filename = False
+    metadata_filename = None
 
     try:
-        opts, args = getopt.getopt(argv, "i:o:s:", ["input=", "output=", "standard_size="])
+        opts, args = getopt.getopt(argv, "i:o:s:m:", ["input=", "output=", "standard_size=", "metadata_filename="])
     except getopt.GetoptError:
         print('test.py -i <input_directory> -o <output_directory>')
         sys.exit(2)
@@ -26,23 +27,25 @@ def main(argv):
             found_input = True
         elif opt in ("-o", "--output"):
             output_directory = pathlib.Path(arg)
-            found_output = True
         elif opt in ("-s", "--standard_size"):
             standardisation_sample = int(arg)
-    if not (found_input and found_output):
-        print('Input directory (-i) and output directory are (-o) are required')
+        elif opt in ("-m", "--metadata_filename"):
+            metadata_filename = arg
+            found_metadata_filename = True
+    if not (found_input and found_metadata_filename):
+        print('Input directory (-i) and metadata_filename (-m) are required.')
         sys.exit(2)
 
-    generate_tf_record(input_directory, output_directory, standardisation_sample)
+    generate_tf_record(input_directory, output_directory, metadata_filename, standardisation_sample)
 
 
-def generate_tf_record(input_directory, output_directory, standardisation_sample):
+def generate_tf_record(input_directory, output_directory, metadata_filename, standardisation_sample):
     tf.random.set_seed(5)
     np.random.seed(5)
     needed_frames = 50
 
     # load videos and file_list and put into tfrecord
-    file_list_data_frame = pandas.read_csv(input_directory / 'FileList.csv')
+    file_list_data_frame = pandas.read_csv(input_directory / metadata_filename)
     train_samples = file_list_data_frame[file_list_data_frame.Split == 'TRAIN'][['FileName', 'EF']]
     validation_samples = file_list_data_frame[file_list_data_frame.Split == 'VAL'][['FileName', 'EF']]
     test_samples = file_list_data_frame[file_list_data_frame.Split == 'TEST'][['FileName', 'EF']]
@@ -51,9 +54,13 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
     test_samples = test_samples.sample(frac=1)
     validation_samples = validation_samples.sample(frac=1)
 
-    train_folder = output_directory / 'train'
-    test_folder = output_directory / 'test'
-    validation_folder = output_directory / 'validation'
+    if output_directory is None:
+        output_directory = input_directory
+
+    train_folder = output_directory / 'tf_record' / 'train'
+    test_folder = output_directory / 'tf_record' / 'test'
+    validation_folder = output_directory / 'tf_record' / 'validation'
+
     test_folder.mkdir(parents=True, exist_ok=True)
     train_folder.mkdir(exist_ok=True)
     validation_folder.mkdir(exist_ok=True)
@@ -72,7 +79,7 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
     number_of_validation_samples = create_tf_record(input_directory, validation_folder / 'validation_{}.tfrecord',
                                                     test_samples, needed_frames)
 
-    if not (output_directory / 'metadata.json').is_file():
+    if not (output_directory / 'tf_record' / 'metadata.json').is_file():
         print('Calculate mean and standard deviation.')
         mean, std = echo_base.calculate_train_mean_and_std(input_directory, train_samples.FileName,
                                                            standardisation_sample)
@@ -88,8 +95,11 @@ def create_tf_record(input_directory, output_file, samples, needed_frames):
     for index in tqdm(range(file_limit), file=sys.stdout):
         with tf.io.TFRecordWriter(str(output_file).format(index)) as writer:
             start = index * chunk_size
-            for file_name, ejection_fraction in zip(samples.FileName[start: start + chunk_size],
-                                                    samples.EF[start: start + chunk_size]):
+            end = start + chunk_size
+            if index + 1 == file_limit:
+                end = len(samples)
+            for file_name, ejection_fraction in zip(samples.FileName[start: end],
+                                                    samples.EF[start: end]):
                 video = echo_base.load_video(str(input_directory / 'Videos' / file_name), needed_frames)
                 if video is not None:
                     number_used_videos += 1
