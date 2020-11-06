@@ -35,19 +35,17 @@ def save_metadata(output_directory, frames_per_second, frame_width, frame_height
 def load_video(file_name, needed_frames):
     video = cv2.VideoCapture(file_name)
     frame_list = []
-    test_list = []
     frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = int(video.get(cv2.CAP_PROP_FPS))
     fps_relative = fps / needed_frames
     if needed_frames > int(frame_count * fps_relative):
         return None
-    for i in range(frame_count * int(needed_frames / fps)):
+    for i in range(int(frame_count * (needed_frames / fps))):
         frame_position = int(i * fps_relative)
         video.set(cv2.CAP_PROP_POS_FRAMES, frame_position-1)
         ret, frame = video.read()
         if frame.shape[2] > 1:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        test_list.append(frame)
         frame_list.append(cv2.imencode('.jpeg', frame)[1].tostring())
     video.release()
     return frame_list

@@ -5,7 +5,7 @@ import numpy as np
 import pathlib
 import pandas
 from tqdm import tqdm
-import preprocessing.echos_to_tf_record as echo_base
+import echos_to_tf_record as echo_base
 
 
 def main(argv):
