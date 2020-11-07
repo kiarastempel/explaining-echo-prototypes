@@ -8,7 +8,7 @@ from data_loader import mainz_recordloader, stanford_recordloader
 from pathlib import Path
 import json
 import sys
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 
 def main(argv):
@@ -64,10 +64,10 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, input_frame
     validation_set = stanford_recordloader.build_dataset(str(validation_record_file_name), batch_size, shuffle_size,
                                                  input_frames)
 
-    for test in train_set.take(1):
+     #for test in train_set.take(1):
         #print(test)
-        plt.imshow(test[0][0][10], cmap='gray')
-        plt.show()
+        # plt.imshow(test[0][0][10], cmap='gray')
+        # plt.show()
 
     model = three_D_convolution_net.ThreeDConvolution_Stanford(width, height, input_frames, channels, mean, std)
     opt = keras.optimizers.Adam(learning_rate)
