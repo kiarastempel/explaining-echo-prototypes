@@ -79,8 +79,8 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, input_frame
     Path("../saved").mkdir(exist_ok=True)
     callbacks = [
         keras.callbacks.EarlyStopping(patience=patience, monitor='val_loss'),
-        keras.callbacks.ModelCheckpoint(filepath='../saved/three_d_conv_best_model.h5', monitor='val_loss',
-                                        save_best_only=True),
+        keras.callbacks.ModelCheckpoint(filepath=(log_dir / 'three_d_conv_best_model.h5'), monitor='val_loss',
+                                        save_best_only=True, mode='min'),
         keras.callbacks.TensorBoard(log_dir=log_dir)
     ]
 
