@@ -12,7 +12,7 @@ import json
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-b', '--batch_size', required=False, default=32, type=int)
+    parser.add_argument('-b', '--batch_size', default=32, type=int)
     parser.add_argument('-s', '--shuffle_size', default=1000, type=int)
     parser.add_argument('-e', '--epochs', default=200, type=int)
     parser.add_argument('-p', '--patience', default=20, type=int)
