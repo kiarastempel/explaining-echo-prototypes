@@ -4,7 +4,6 @@ import tensorflow as tf
 import numpy as np
 import pathlib
 import pandas as pd
-import cv2
 from tqdm import tqdm
 import preprocessing.echos_to_tf_record as echo_base
 
@@ -58,44 +57,56 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
     file_information["id"] = file_information["id"].astype(int)
     video_metadata = file_information.merge(file_list_data_frame, on="id", how="right")
     a4c_video_metadata = video_metadata[video_metadata["view"] == "a4c"]
-    a4c_video_metadata.reset_index(inplace=True, drop=True)
-    train_folder = output_directory / 'tf_record' / 'train'
-    test_folder = output_directory / 'tf_record' / 'test'
-    validation_folder = output_directory / 'tf_record' / 'validation'
+    a2c_video_metadata = video_metadata[video_metadata["view"] == "a2c"]
+    psax_video_metadata = video_metadata[video_metadata["view"] == "psax"]
+
+    for view_metadata in (a4c_video_metadata, a2c_video_metadata, psax_video_metadata):
+        view_metadata.reset_index(inplace=True, drop=True)
 
     train_ratio = 0.7
     validation_ratio = 0.15
-    test_ratio = 0.15
 
-    train_samples, validation_samples, test_samples = np.split(a4c_video_metadata.sample(frac=1, replace=False,
-                                                                                         random_state=random_seed),
-                                                               [int(train_ratio * len(a4c_video_metadata)),
-                                                                int((train_ratio + validation_ratio) * len(
-                                                                    a4c_video_metadata))])
-    test_folder.mkdir(parents=True, exist_ok=True)
-    train_folder.mkdir(exist_ok=True)
-    validation_folder.mkdir(exist_ok=True)
+    for view_metadata, view in zip((a4c_video_metadata, a2c_video_metadata, psax_video_metadata, video_metadata),
+                                   ('a4c', 'a2c', 'psax', 'all')):
+        train_folder = output_directory / 'tf_records' / view / 'train'
+        test_folder = output_directory / 'tf_records' / view / 'test'
+        validation_folder = output_directory / 'tf_records' / view / 'validation'
 
-    width, height = echo_base.extract_metadata(train_samples.FileName[1], input_directory)
+        unique_ids = view_metadata['id'].unique()
+        np.random.shuffle(unique_ids)
 
-    print('Create train record.')
-    number_of_train_samples = create_tf_record(input_directory, train_folder / 'train_{}.tfrecord', train_samples,
-                                               needed_frames)
+        train_ids, validation_ids, test_ids = np.split(unique_ids,
+                                                       [int(train_ratio * len(unique_ids)),
+                                                        int((train_ratio + validation_ratio) * len(
+                                                            unique_ids))])
+        train_samples = view_metadata[view_metadata['id'].isin(train_ids)]
+        validation_samples = view_metadata[view_metadata['id'].isin(test_ids)]
+        test_samples = view_metadata[view_metadata['id'].isin(validation_ids)]
+        test_folder.mkdir(parents=True, exist_ok=True)
+        train_folder.mkdir(exist_ok=True)
+        validation_folder.mkdir(exist_ok=True)
 
-    print('Create test record.')
-    number_of_test_samples = create_tf_record(input_directory, test_folder / 'test_{}.tfrecord', validation_samples,
-                                              needed_frames)
+        width, height = echo_base.extract_metadata(train_samples.FileName[1], input_directory)
 
-    print('Create validation record.')
-    number_of_validation_samples = create_tf_record(input_directory, validation_folder / 'validation_{}.tfrecord',
-                                                    test_samples, needed_frames)
+        print(f'Create train record for {view} echocardiograms.')
+        number_of_train_samples = create_tf_record(input_directory, train_folder / 'train_{}.tfrecord', train_samples,
+                                                   needed_frames)
 
-    if not (output_directory / 'tf_record' / 'metadata.json').is_file():
-        print('Calculate mean and standard deviation.')
-        mean, std = calculate_train_mean_and_std(input_directory, train_samples.FileName, standardisation_sample)
-        echo_base.save_metadata(output_directory, needed_frames, width, height, mean, std, number_of_test_samples,
-                                number_of_train_samples,
-                                number_of_validation_samples)
+        print(f'Create test record  for {view} echocardiograms.')
+        number_of_test_samples = create_tf_record(input_directory, test_folder / 'test_{}.tfrecord', validation_samples,
+                                                  needed_frames)
+
+        print(f'Create validation record  for {view} echocardiograms')
+        number_of_validation_samples = create_tf_record(input_directory, validation_folder / 'validation_{}.tfrecord',
+                                                        test_samples, needed_frames)
+
+        if not (output_directory / 'tf_records' / 'metadata.json').is_file():
+            print('Calculate mean and standard deviation.')
+            mean, std = echo_base.calculate_train_mean_and_std(input_directory, train_samples.FileName,
+                                                               standardisation_sample)
+            echo_base.save_metadata(output_directory, needed_frames, width, height, mean, std, number_of_test_samples,
+                                    number_of_train_samples,
+                                    number_of_validation_samples)
 
 
 def create_tf_record(input_directory, output_file, samples, needed_frames=50):
@@ -129,32 +140,6 @@ def serialise_example(video, ejection_fraction, e_e_prime, quality):
     }
     example_proto = tf.train.Example(features=tf.train.Features(feature=feature))
     return example_proto.SerializeToString()
-
-
-def calculate_train_mean_and_std(input_directory, file_names, standardisation_sample=None):
-    n = 0
-    mean = 0
-    M2 = 0
-    if standardisation_sample is None:
-        standardisation_sample = len(file_names)
-    filenames_to_use = file_names[0:standardisation_sample]
-    for file_name in tqdm(filenames_to_use, file=sys.stdout):
-        video = cv2.VideoCapture(str(input_directory / 'Videos' / file_name))
-        frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-        for index in range(frame_count):
-            ret, frame = video.read()
-            if frame.shape[2] > 1:
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            height, width = frame.shape
-            for i in range(height):
-                for j in range(width):
-                    x = frame.item(i, j)
-                    n = n + 1
-                    delta = x - mean
-                    mean = mean + delta / n
-                    M2 = M2 + delta * (x - mean)
-    var = M2 / (n - 1)
-    return mean, np.sqrt(var)
 
 
 if __name__ == '__main__':
