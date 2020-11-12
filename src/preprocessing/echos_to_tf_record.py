@@ -28,7 +28,7 @@ def save_metadata(output_directory, frames_per_second, frame_width, frame_height
     }
     }
 
-    with open(output_directory / 'tf_record' / 'metadata.json', 'w') as outfile:
+    with open(output_directory, 'w') as outfile:
         json.dump(metadata, outfile)
 
 

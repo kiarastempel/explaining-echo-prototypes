@@ -18,4 +18,4 @@ class CHandleDatabase:
 
     def get_id(self, subdirname):
         global _cursor
-        result = _cursor.execute('SELECT myoid FROM dbo.TableLoadStatus")
+        result = _cursor.execute('SELECT myoid FROM dbo.TableLoadStatus')

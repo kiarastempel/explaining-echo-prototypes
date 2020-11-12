@@ -1,4 +1,4 @@
-import getopt
+import argparse
 from datetime import datetime
 from tensorflow import keras
 from models import three_D_convolution_net
@@ -7,36 +7,20 @@ import tensorflow as tf
 from data_loader import mainz_recordloader, stanford_recordloader
 from pathlib import Path
 import json
-import sys
 #import matplotlib.pyplot as plt
 
 
-def main(argv):
-    batch_size = 32
-    shuffle_size = 1000
-    epochs = 200
-    patience = 20
-    input_frames = 50
-    learning_rate = 0.0008
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('b', 'batch_size', required=False, default=32)
+    parser.add_argument('s', 'shuffle_size', default=1000)
+    parser.add_argument('e', 'epochs', default=200)
+    parser.add_argument('p', 'patience', default=20)
+    parser.add_argument('l', 'learning_rate', default=0.008)
+    parser.add_argument('f', 'number_input_frames', default=50)
+    args = parser.parse_args()
 
-    try:
-        opts, args = getopt.getopt(argv, "b:s:e:p:l:", ["batch_size=", "shuffle_size=", "epochs=", "patience=",
-                                                        "learning_rate="])
-    except getopt.GetoptError:
-        print('train.py -b <batch_size> -s <shuffle_size> -e <epochs> -e <epochs> -p <patience> -l <learning_rate>')
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt in ("-b", "--batch_size"):
-            batch_size = int(arg)
-        elif opt in ("-s", "--shuffle_size"):
-            shuffle_size = int(arg)
-        elif opt in ("-r", "--epochs"):
-            epochs = int(arg)
-        elif opt in ("-p", "--patience"):
-            patience = int(arg)
-        elif opt in ("-l", "--learning_rate"):
-            learning_rate = float(arg)
-    train(batch_size, shuffle_size, epochs, patience, learning_rate, input_frames)
+    train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.input_frames)
 
 
 def train(batch_size, shuffle_size, epochs, patience, learning_rate, input_frames):
@@ -90,4 +74,4 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, input_frame
 
 if __name__ == "__main__":
     # execute only if run as a script
-    main(sys.argv[1:])
+    main()
