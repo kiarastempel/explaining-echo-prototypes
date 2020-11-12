@@ -12,12 +12,12 @@ import json
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('b', 'batch_size', required=False, default=32, type=int)
-    parser.add_argument('s', 'shuffle_size', default=1000, type=int)
-    parser.add_argument('e', 'epochs', default=200, type=int)
-    parser.add_argument('p', 'patience', default=20, type=int)
-    parser.add_argument('l', 'learning_rate', default=0.008, type=float)
-    parser.add_argument('f', 'number_input_frames', default=50, type=int)
+    parser.add_argument('-b', '--batch_size', required=False, default=32, type=int)
+    parser.add_argument('-s', '--shuffle_size', default=1000, type=int)
+    parser.add_argument('-e', '--epochs', default=200, type=int)
+    parser.add_argument('-p', '--patience', default=20, type=int)
+    parser.add_argument('-l', '--learning_rate', default=0.008, type=float)
+    parser.add_argument('-f', '--number_input_frames', default=50, type=int)
     args = parser.parse_args()
 
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.input_frames)
