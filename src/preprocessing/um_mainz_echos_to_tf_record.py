@@ -11,8 +11,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('i', 'input_directory', required=True, help="Directory with the echocardiograms.")
     parser.add_argument('o', 'output_directory', required=False, default=None, help="Directory to save the TFRecord in")
-    parser.add_argument('s', 'standardization_size', required=False, default=None, help="Number of videos for "
-                        "calculating the mean and standard deviation.")
+    parser.add_argument('s', 'standardization_size', required=False, type=int, default=None, help="Number of videos "
+                        "for calculating the mean and standard deviation.")
     parser.add_argument('m', 'metadata_filename', required=True, help="Name of the metadata file.")
     args = parser.parse_args()
 
