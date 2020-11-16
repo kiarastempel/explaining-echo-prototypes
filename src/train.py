@@ -7,6 +7,7 @@ import tensorflow as tf
 from data_loader import mainz_recordloader, stanford_recordloader
 from pathlib import Path
 import json
+#just for tests
 #import matplotlib.pyplot as plt
 
 
@@ -20,15 +21,15 @@ def main():
     parser.add_argument('-f', '--number_input_frames', default=50, type=int)
     args = parser.parse_args()
 
-    train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.input_frames)
+    train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames)
 
 
 def train(batch_size, shuffle_size, epochs, patience, learning_rate, input_frames):
     tf.random.set_seed(5)
 
     data_folder = Path('../data/dynamic-echo-data/tf_record/')
-    train_record_file_name = data_folder / 'train' / 'train_*.tfrecord'
-    validation_record_file_name = data_folder / 'validation' / 'validation_*.tfrecord'
+    train_record_file_name = data_folder / 'train' / 'train_*.tfrecord.gzip'
+    validation_record_file_name = data_folder / 'validation' / 'validation_*.tfrecord.gzip'
     metadata_path = data_folder / 'metadata.json'
 
     with open(metadata_path) as metadata_file:
@@ -44,14 +45,13 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, input_frame
         channels = metadata['channels']
 
     train_set = stanford_recordloader.build_dataset(str(train_record_file_name), batch_size, shuffle_size, input_frames,
-                                            split=False)
+                                                    split=False)
     validation_set = stanford_recordloader.build_dataset(str(validation_record_file_name), batch_size, shuffle_size,
-                                                 input_frames)
-
-     #for test in train_set.take(1):
-        #print(test)
-        # plt.imshow(test[0][0][10], cmap='gray')
-        # plt.show()
+                                                         input_frames)
+    # just for tests purposes
+    #for test in train_set.take(1):
+        #plt.imshow(test[0][0][10], cmap='gray')
+        #plt.show()
 
     model = three_D_convolution_net.ThreeDConvolution_Stanford(width, height, input_frames, channels, mean, std)
     opt = keras.optimizers.Adam(learning_rate)

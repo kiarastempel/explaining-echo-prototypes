@@ -1,5 +1,7 @@
 import argparse
 import sys
+from pathlib import Path
+
 import tensorflow as tf
 import numpy as np
 import pandas as pd
@@ -30,9 +32,10 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
     needed_frames = 50
 
     # load videos and file_list and put into tfrecord
-    file_list_data_frame = pd.read_csv(input_directory / metadata_filename, sep=";", decimal=",")
+    input_path = Path(input_directory)
+    file_list_data_frame = pd.read_csv(input_path / metadata_filename, sep=";", decimal=",")
 
-    p = (input_directory / 'Videos').glob('*')
+    p = (input_path / 'Videos').glob('*')
     video_paths = [x.name for x in p if x.is_file()]
     file_information = pd.DataFrame([(x, x.split('_')[0], x.split('_')[1]) for x in video_paths],
                                     columns=["FileName", "id", "view"])
@@ -48,11 +51,12 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
     train_ratio = 0.7
     validation_ratio = 0.15
 
+    output_path = Path(output_directory)
     for view_metadata, view in zip((a4c_video_metadata, a2c_video_metadata, psax_video_metadata, video_metadata),
                                    ('a4c', 'a2c', 'psax', 'all')):
-        train_folder = output_directory / 'tf_records' / view / 'train'
-        test_folder = output_directory / 'tf_records' / view / 'test'
-        validation_folder = output_directory / 'tf_records' / view / 'validation'
+        train_folder = output_path / 'tf_records' / view / 'train'
+        test_folder = output_path / 'tf_records' / view / 'test'
+        validation_folder = output_path / 'tf_records' / view / 'validation'
 
         unique_ids = view_metadata['id'].unique()
         np.random.shuffle(unique_ids)
@@ -68,24 +72,24 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
         train_folder.mkdir(exist_ok=True)
         validation_folder.mkdir(exist_ok=True)
 
-        width, height = echo_base.extract_metadata(train_samples.FileName[1], input_directory)
+        width, height = echo_base.extract_metadata(train_samples.FileName[1], input_path)
 
         print(f'Create train record for {view} echocardiograms.')
-        number_of_train_samples = create_tf_record(input_directory, train_folder / 'train_{}.tfrecord', train_samples,
+        number_of_train_samples = create_tf_record(input_path, train_folder / 'train_{}.tfrecord', train_samples,
                                                    needed_frames)
 
         print(f'Create test record  for {view} echocardiograms.')
-        number_of_test_samples = create_tf_record(input_directory, test_folder / 'test_{}.tfrecord', validation_samples,
+        number_of_test_samples = create_tf_record(input_path, test_folder / 'test_{}.tfrecord', validation_samples,
                                                   needed_frames)
 
         print(f'Create validation record  for {view} echocardiograms')
-        number_of_validation_samples = create_tf_record(input_directory, validation_folder / 'validation_{}.tfrecord',
+        number_of_validation_samples = create_tf_record(input_path, validation_folder / 'validation_{}.tfrecord',
                                                         test_samples, needed_frames)
 
-        metadata_file_path = output_directory / 'tf_record' / view / 'metadata.json'
+        metadata_file_path = output_path / 'tf_record' / view / 'metadata.json'
         if not metadata_file_path.is_file():
             print('Calculate mean and standard deviation.')
-            mean, std = echo_base.calculate_train_mean_and_std(input_directory, train_samples.FileName,
+            mean, std = echo_base.calculate_train_mean_and_std(input_path, train_samples.FileName,
                                                                standardisation_sample)
             echo_base.save_metadata(metadata_file_path, needed_frames, width, height, mean, std, number_of_test_samples,
                                     number_of_train_samples,
@@ -97,7 +101,9 @@ def create_tf_record(input_directory, output_file, samples, needed_frames=50):
     file_limit = 10
     chunk_size = int(len(samples) / file_limit)
     for index in tqdm(range(file_limit), file=sys.stdout):
-        with tf.io.TFRecordWriter(str(output_file).format(index)) as writer:
+        options = tf.io.TFRecordOptions(compression_type='GZIP')
+        writer = tf.io.TFRecordWriter(str(output_file).format(index), options=options)
+        with writer:
             start = index * chunk_size
             end = start + chunk_size
             if index + 1 == file_limit:
