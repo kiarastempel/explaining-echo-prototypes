@@ -19,10 +19,10 @@ data_augmentation = keras.Sequential(
 def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, augment=False,
                   split=False):
     AUTOTUNE = tf.data.experimental.AUTOTUNE
-    ds = tf.data.Dataset \
-        .list_files(file_names) \
-        .interleave(tf.data.TFRecordDataset, cycle_length=AUTOTUNE, num_parallel_calls=AUTOTUNE) \
-        .shuffle(shuffle_size)
+    ds = tf.data.Dataset.list_files(file_names)
+    ds = ds.interleave(lambda files: tf.data.TFRecordDataset(files, compression_type='GZIP'), cycle_length=AUTOTUNE,
+                       num_parallel_calls=AUTOTUNE)
+    ds = ds.shuffle(shuffle_size)
     if split:
         ds = ds.map(lambda x: parse_and_augment_example(x, number_of_input_frames),
                     num_parallel_calls=AUTOTUNE)
