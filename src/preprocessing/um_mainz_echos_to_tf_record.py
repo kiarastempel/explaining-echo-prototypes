@@ -16,20 +16,21 @@ def main():
     parser.add_argument('-s', '--standardization_size', type=int, help="Number of videos "
                         "for calculating the mean and standard deviation.")
     parser.add_argument('-m', '--metadata_filename', default='FileList.csv', help="Name of the metadata file.")
+    parser.add_argument('--needed_frames', default=50, type=int, help="Number of minimum frames required for an echo "
+                                                                      "to be considered.")
     args = parser.parse_args()
 
     if args.output_directory is None:
         args.output_directory = args.input_directory
 
     generate_tf_record(args.input_directory, args.output_directory, args.standardisation_sample,
-                       args.metadata_filename)
+                       args.metadata_filename, args.needed_frames)
 
 
-def generate_tf_record(input_directory, output_directory, standardisation_sample, metadata_filename):
+def generate_tf_record(input_directory, output_directory, standardisation_sample, metadata_filename, needed_frames):
     random_seed = 5
     tf.random.set_seed(random_seed)
     np.random.seed(random_seed)
-    needed_frames = 50
 
     # load videos and file_list and put into tfrecord
     input_path = Path(input_directory)
