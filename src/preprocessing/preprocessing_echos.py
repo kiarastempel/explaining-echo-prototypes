@@ -1,3 +1,4 @@
+import argparse
 import io
 from pathlib import Path
 import cv2
@@ -9,12 +10,19 @@ from tqdm import tqdm
 
 
 def main():
-    data_path = Path('../../data/raw')
-    result_path = Path('../../data/processed')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data_path', default='../../data/raw', help="Directory with the echocardiograms.")
+    parser.add_argument('-o', '--output_directory', default='../../data/processed', help="Directory to save "
+                                                                                         "the processed echocardiograms "
+                                                                                         "into.")
+    args = parser.parse_args()
+
+    data_path = Path(args.data_path)
+    output_directory = Path(args.output_directory)
     p = data_path.glob('**/*')
     video_paths = [x for x in p if x.is_file()]
     for video_path in tqdm(video_paths):
-        make_video(video_path, result_path)
+        make_video(video_path, output_directory)
 
 
 def make_video(file_to_process, destination_folder):
