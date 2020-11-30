@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_path', default='../../data/raw', help="Directory with the echocardiograms.")
+    parser.add_argument('-i', '--data_path', default='../../data/raw', help="Directory with the echocardiograms.")
     parser.add_argument('-o', '--output_directory', default='../../data/processed', help="Directory to save "
                                                                                          "the processed echocardiograms "
                                                                                          "into.")
