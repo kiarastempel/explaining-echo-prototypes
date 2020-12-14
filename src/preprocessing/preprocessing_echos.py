@@ -29,9 +29,8 @@ def make_video(file_to_process, destination_folder):
     file_name = file_to_process.stem
     print(f'Processing {file_name}')
     video_filename = (destination_folder / file_name).with_suffix('.avi')
-    dicom_filename = (destination_folder / file_name).with_suffix('.dcm')
 
-    if not (Path(video_filename).is_file() and Path(dicom_filename).is_file()):
+    if not (Path(video_filename).is_file()):
         dicom_file = dicom.dcmread(file_to_process)
         pixel_array = dicom_file.pixel_array
         frames, height, width, channels = pixel_array.shape
@@ -69,13 +68,13 @@ def make_video(file_to_process, destination_folder):
         out.release()
 
         # Create the dcm file
-        dicom_file.PixelData = encapsulate(video)
-        dicom_file.SamplesPerPixel = 1
-        dicom_file.ImageType = 'DERIVED'
-        dicom_file.PhotometricInterpretation = "MONOCHROME2"
-        dicom_file.Rows, dicom_file.Columns = crop_size_dcm
-        dicom_file.CineRate = 50
-        dicom_file.save_as(dicom_filename, write_like_original=False)
+        #dicom_file.PixelData = encapsulate(video)
+        #dicom_file.SamplesPerPixel = 1
+        #dicom_file.ImageType = 'DERIVED'
+        #dicom_file.PhotometricInterpretation = "MONOCHROME2"
+        #dicom_file.Rows, dicom_file.Columns = crop_size_dcm
+        #dicom_file.CineRate = 50
+        #dicom_file.save_as(dicom_filename, write_like_original=False)
 
     else:
         print(file_name, "hasAlreadyBeenProcessed")
