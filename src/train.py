@@ -53,7 +53,7 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, input_frame
         #plt.imshow(test[0][0][10], cmap='gray')
         #plt.show()
 
-    model = three_D_convolution_net.ThreeDConvolution_Stanford(width, height, input_frames, channels, mean, std)
+    model = three_D_convolution_net.ThreeDConvolutionVGGStanford(width, height, input_frames, channels, mean, std)
     opt = keras.optimizers.Adam(learning_rate)
     # opt = tfa.optimizers.SWA(opt, start_averaging=m, average_period=k)
     model.compile(optimizer=opt, loss='mse', metrics=['mae'])
@@ -61,9 +61,11 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, input_frame
     Path("../logs").mkdir(exist_ok=True)
     log_dir = Path("../logs", datetime.now().strftime("%Y%m%d-%H%M%S"))
     Path("../saved").mkdir(exist_ok=True)
+    save_path = Path("../saved", datetime.now().strftime("%Y%m%d-%H%M%S"))
+
     callbacks = [
         keras.callbacks.EarlyStopping(patience=patience, monitor='val_loss'),
-        keras.callbacks.ModelCheckpoint(filepath=(log_dir / 'three_d_conv_best_model.h5'), monitor='val_loss',
+        keras.callbacks.ModelCheckpoint(filepath=(save_path / 'three_d_conv_best_model.h5'), monitor='val_loss',
                                         save_best_only=True, mode='min'),
         keras.callbacks.TensorBoard(log_dir=log_dir)
     ]
