@@ -8,7 +8,8 @@ class ThreeDConvolutionVGGStanford(keras.Model):
         input_shape = (frames, width, height, channels)
         self.model = keras.Sequential(
             [
-                keras.layers.experimental.preprocessing.Rescaling(scale=1 / std, offset=-mean/std, input_shape=input_shape),
+                keras.layers.experimental.preprocessing.Rescaling(scale=1 / std, offset=-mean/std,
+                                                                  input_shape=input_shape),
                 keras.layers.Conv3D(32, 3, activation='relu'),
                 keras.layers.BatchNormalization(),
                 keras.layers.MaxPool3D(pool_size=(1, 2, 2)),
@@ -51,8 +52,6 @@ class ThreeDConvolutionResNetStanford(keras.Model):
 
     def call(self, inputs, **kwargs):
         return self.model(inputs)
-
-
 
 
 class ThreeDConvolution(keras.Model):
