@@ -78,17 +78,12 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     Path("../logs").mkdir(exist_ok=True)
     Path("../saved").mkdir(exist_ok=True)
     log_dir = Path("../logs", datetime.now().strftime("%Y%m%d-%H%M%S"))
+    save_path = Path("../saved", datetime.now().strftime("%Y%m%d-%H%M%S"))
     log_dir_train = log_dir / 'train'
     log_dir_validation = log_dir / 'validation'
-    save_path = Path("../saved, 'three_d_conv_best_model.h5'", datetime.now().strftime("%Y%m%d-%H%M%S"))
+    save_path = Path('../saved', datetime.now().strftime("%Y%m%d-%H%M%S"), 'three_d_conv_best_model.h5')
     file_writer_train = tf.summary.create_file_writer(log_dir_train)
     file_writer_validation = tf.summary.create_file_writer(log_dir_validation)
-
-    callbacks = [
-        keras.callbacks.ModelCheckpoint(filepath=(save_path / 'three_d_conv_best_model.h5'), monitor='val_loss',
-                                        save_best_only=True, mode='min'),
-        keras.callbacks.TensorBoard(log_dir=log_dir)
-    ]
 
     for epoch in range(epochs):
         for metric in (train_mse_metric, validation_mse_metric):

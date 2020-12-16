@@ -6,7 +6,7 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-import preprocessing.echos_to_tf_record as echo_base
+import echos_to_tf_record as echo_base
 
 
 def main():
@@ -23,7 +23,7 @@ def main():
     if args.output_directory is None:
         args.output_directory = args.input_directory
 
-    generate_tf_record(args.input_directory, args.output_directory, args.standardisation_sample,
+    generate_tf_record(args.input_directory, args.output_directory, args.standardization_size,
                        args.metadata_filename, args.needed_frames)
 
 
