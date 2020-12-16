@@ -87,7 +87,7 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
         number_of_validation_samples = create_tf_record(input_path, validation_folder / 'validation_{}.tfrecord',
                                                         test_samples, needed_frames)
 
-        metadata_file_path = output_path / 'tf_record' / view / 'metadata.json'
+        metadata_file_path = output_path / 'tf_records' / view / 'metadata.json'
         if not metadata_file_path.is_file():
             print('Calculate mean and standard deviation.')
             mean, std = echo_base.calculate_train_mean_and_std(input_path, train_samples.FileName,

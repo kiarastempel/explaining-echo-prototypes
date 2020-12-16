@@ -13,7 +13,7 @@ def extract_metadata(file_name, input_directory):
     return frame_width, frame_height
 
 
-def save_metadata(output_directory, frames_per_second, frame_width, frame_height, mean, std, number_of_test_samples,
+def save_metadata(output_file, frames_per_second, frame_width, frame_height, mean, std, number_of_test_samples,
                   number_of_train_samples, number_of_validation_samples):
     metadata = {'metadata': {
         'frames_per_second': frames_per_second,
@@ -28,7 +28,7 @@ def save_metadata(output_directory, frames_per_second, frame_width, frame_height
     }
     }
 
-    with open(output_directory, 'w') as outfile:
+    with open(output_file, 'w') as outfile:
         json.dump(metadata, outfile)
 
 

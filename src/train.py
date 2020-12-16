@@ -8,7 +8,6 @@ from data_loader import mainz_recordloader, stanford_recordloader
 from pathlib import Path
 import math
 import json
-from utils import mean_metrics
 #just for tests
 #import matplotlib.pyplot as plt
 
@@ -72,13 +71,14 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     best_loss = math.inf
     train_mse_metric = keras.metrics.MeanSquaredError()
     validation_mse_metric = keras.metrics.MeanSquaredError()
-    validation_mse_metric_distinct = keras.metrics.MeanSquaredError()
-    validation_mse_metric_overlapping = keras.metrics.MeanSquaredError()
-
+    validation_mae_metric = keras.metrics.MeanAbsoluteError()
+    validation_mae_metric_distinct = keras.metrics.MeanAbsoluteError()
+    validation_mae_metric_overlapping = keras.metrics.MeanAbsoluteError()
+    all_metrics = [train_mse_metric, validation_mse_metric, validation_mae_metric, validation_mae_metric_distinct,
+                   validation_mae_metric_overlapping]
     Path("../logs").mkdir(exist_ok=True)
     Path("../saved").mkdir(exist_ok=True)
     log_dir = Path("../logs", datetime.now().strftime("%Y%m%d-%H%M%S"))
-    save_path = Path("../saved", datetime.now().strftime("%Y%m%d-%H%M%S"))
     log_dir_train = log_dir / 'train'
     log_dir_validation = log_dir / 'validation'
     save_path = Path('../saved', datetime.now().strftime("%Y%m%d-%H%M%S"), 'three_d_conv_best_model.h5')
@@ -86,7 +86,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     file_writer_validation = tf.summary.create_file_writer(log_dir_validation)
 
     for epoch in range(epochs):
-        for metric in (train_mse_metric, validation_mse_metric):
+        for metric in all_metrics:
             metric.reset_states()
 
         for step, (x_batch_train, y_batch_train) in enumerate(train_dataset):
@@ -96,17 +96,24 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             tf.summary.scalar('MSE', data=train_mse_metric.result(), step=epoch)
 
         for x_batch_val, y_batch_val in validation_dataset:
-            x_batch_val = x_batch_val[:, 0:50, :, :]
-            validation_step(model, loss_fn, x_batch_val, y_batch_val, validation_mse_metric)
-        validation_loss = validation_mse_metric.result()
+            validation_step(model, x_batch_val, y_batch_val, validation_mse_metric)
+            validation_step(model, x_batch_val, y_batch_val, validation_mae_metric)
+
+        validation_mse = validation_mse_metric.result()
+        validation_mae = validation_mae_metric.result()
+        validation_mae_overlapping = validation_mae_metric_overlapping.result()
+        validation_mae_distinct = validation_mae_metric_distinct.result()
 
         with file_writer_validation.as_default():
-            tf.summary.scalar('MAE overlapping', data=validation_loss, step=epoch)
+            tf.summary.scalar('MSE', data=validation_mse, step=epoch)
+            tf.summary.scalar('MAE', data=validation_mae, step=epoch)
+            tf.summary.scalar('MAE overlapping', data=validation_mae_overlapping, step=epoch)
+            tf.summary.scalar('MAE distinct', data=validation_mae_distinct, step=epoch)
 
         # early stopping and save best model
-        if validation_loss < best_loss:
+        if validation_mse < best_loss:
             early_stopping_counter = 0
-            best_loss = validation_loss
+            best_loss = validation_mse
             model.save(save_path)
         else:
             early_stopping_counter += 1
@@ -132,11 +139,18 @@ def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_ms
 
 
 @tf.function
-def validation_step(model, loss_fn, x_validation, y_validation, validation_mse_metric):
+def validation_step(model, x_validation, y_validation, validation_metric):
     predictions = model(x_validation, training=False)
     mean_prediction = tf.reduce_mean(predictions)
-    loss = loss_fn(y_validation, mean_prediction)
-    validation_mse_metric.update_state(loss)
+    validation_metric.update_state(y_validation, mean_prediction)
+
+
+def split_distinct():
+    pass
+
+
+def split_overlapping():
+    pass
 
 
 if __name__ == "__main__":
