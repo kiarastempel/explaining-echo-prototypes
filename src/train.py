@@ -72,6 +72,9 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     best_loss = math.inf
     train_mse_metric = keras.metrics.MeanSquaredError()
     validation_mse_metric = keras.metrics.MeanSquaredError()
+    validation_mse_metric_distinct = keras.metrics.MeanSquaredError()
+    validation_mse_metric_overlapping = keras.metrics.MeanSquaredError()
+
     Path("../logs").mkdir(exist_ok=True)
     Path("../saved").mkdir(exist_ok=True)
     log_dir = Path("../logs", datetime.now().strftime("%Y%m%d-%H%M%S"))
@@ -88,22 +91,22 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     ]
 
     for epoch in range(epochs):
-        if stop_training:
-            break
+        for metric in (train_mse_metric, validation_mse_metric):
+            metric.reset_states()
+
         for step, (x_batch_train, y_batch_train) in enumerate(train_dataset):
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_mse_metric)
 
         with file_writer_train.as_default:
             tf.summary.scalar('MSE', data=train_mse_metric.result(), step=epoch)
-        train_mse_metric.reset_states()
 
         for x_batch_val, y_batch_val in validation_dataset:
-            validation_step(x_batch_val, y_batch_val, validation_mse_metric)
+            x_batch_val = x_batch_val[:, 0:50, :, :]
+            validation_step(model, loss_fn, x_batch_val, y_batch_val, validation_mse_metric)
         validation_loss = validation_mse_metric.result()
 
         with file_writer_validation.as_default():
             tf.summary.scalar('MAE overlapping', data=validation_loss, step=epoch)
-        validation_mse_metric.reset_states()
 
         # early stopping and save best model
         if validation_loss < best_loss:
@@ -113,14 +116,14 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
         else:
             early_stopping_counter += 1
             if early_stopping_counter > patience:
-                stop_training = True
+                break
         # distinct_mae = mean_metrics.distinct_mean()
         # overlapping_mae = mean_metrics.overlapping_mean()
         # tf.summary.scalar('MAE distinct', data=distinct_mae, step=epoch)
         # tf.summary.scalar('MAE overlapping', data=overlapping_mae, step=epoch)
 
+    # TODO implement swa
 
-    # extra run for updating bn layer after swa
 
 @tf.function
 def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_mse_metric):
@@ -134,10 +137,11 @@ def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_ms
 
 
 @tf.function
-def validation_step(model, loss_fn, x_batch_validation, y_batch_validation, validation_mse_metric):
-    predictions = model(x_batch_validation, training=True)
-    loss_value = loss_fn(y_batch_validation, predictions)
-    validation_mse_metric.update_state(loss_value)
+def validation_step(model, loss_fn, x_validation, y_validation, validation_mse_metric):
+    predictions = model(x_validation, training=False)
+    mean_prediction = tf.reduce_mean(predictions)
+    loss = loss_fn(y_validation, mean_prediction)
+    validation_mse_metric.update_state(loss)
 
 
 if __name__ == "__main__":
