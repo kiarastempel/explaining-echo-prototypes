@@ -74,7 +74,6 @@ def generate_tf_record(input_directory, output_directory, metadata_filename, sta
         print('Calculate mean and standard deviation.')
         mean, std = echo_base.calculate_train_mean_and_std(input_path, train_samples.FileName,
                                                            standardisation_sample)
-
         echo_base.save_metadata(metadata_file_path, needed_frames, width, height, mean, std, number_of_test_samples,
                                 number_of_train_samples,
                                 number_of_validation_samples)

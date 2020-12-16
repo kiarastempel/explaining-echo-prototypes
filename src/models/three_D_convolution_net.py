@@ -50,6 +50,7 @@ class ThreeDConvolutionResNetStanford(keras.Model):
         super(ThreeDConvolutionResNetStanford, self).__init__()
         input_shape = (frames, width, height, channels)
 
+
     def call(self, inputs, **kwargs):
         return self.model(inputs)
 

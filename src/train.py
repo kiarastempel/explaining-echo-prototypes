@@ -6,6 +6,7 @@ import tensorflow_addons as tfa
 import tensorflow as tf
 from data_loader import mainz_recordloader, stanford_recordloader
 from pathlib import Path
+import math
 import json
 from utils import mean_metrics
 #just for tests
@@ -14,6 +15,7 @@ from utils import mean_metrics
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--input_directory', default='../../data', help="Directory with the TFRecord files.")
     parser.add_argument('-b', '--batch_size', default=32, type=int)
     parser.add_argument('-s', '--shuffle_size', default=1000, type=int)
     parser.add_argument('-e', '--epochs', default=200, type=int)
@@ -23,16 +25,16 @@ def main():
     parser.add_argument('--dataset', default='stanford', choices=['stanford', 'mainz'])
     args = parser.parse_args()
 
-    train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames)
+    train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
+          Path(args.data_folder))
 
 
-def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_input_frames):
+def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_input_frames, data_folder):
     tf.random.set_seed(5)
 
-    data_folder = Path('../data/dynamic-echo-data/tf_record/')
-    train_record_file_name = data_folder / 'train' / 'train_*.tfrecord.gzip'
-    validation_record_file_name = data_folder / 'validation' / 'validation_*.tfrecord.gzip'
-    metadata_path = data_folder / 'metadata.json'
+    train_record_file_name = data_folder / 'tf_record' / 'train' / 'train_*.tfrecord.gzip'
+    validation_record_file_name = data_folder / 'tf_record' / 'validation' / 'validation_*.tfrecord.gzip'
+    metadata_path = data_folder / 'tf_record' / 'metadata.json'
 
     with open(metadata_path) as metadata_file:
         metadata_json = json.load(metadata_file)
@@ -60,21 +62,24 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
                                                                  std)
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
-    number_of_steps = int(number_of_train_samples / batch_size)
     # opt = tfa.optimizers.SWA(opt, start_averaging=m, average_period=k)
-    train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_of_steps)
+    train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn)
 
 
-def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_of_steps):
-    early_stopping = keras.callbacks.EarlyStopping(patience=patience)
+def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn):
+    early_stopping_counter = 0
+    stop_training = False
+    best_loss = math.inf
     train_mse_metric = keras.metrics.MeanSquaredError()
     validation_mse_metric = keras.metrics.MeanSquaredError()
     Path("../logs").mkdir(exist_ok=True)
     Path("../saved").mkdir(exist_ok=True)
     log_dir = Path("../logs", datetime.now().strftime("%Y%m%d-%H%M%S"))
-    save_path = Path("../saved", datetime.now().strftime("%Y%m%d-%H%M%S"))
-    file_writer = tf.summary.create_file_writer(log_dir + "/metrics")
-    file_writer.set_as_default()
+    log_dir_train = log_dir / 'train'
+    log_dir_validation = log_dir / 'validation'
+    save_path = Path("../saved, 'three_d_conv_best_model.h5'", datetime.now().strftime("%Y%m%d-%H%M%S"))
+    file_writer_train = tf.summary.create_file_writer(log_dir_train)
+    file_writer_validation = tf.summary.create_file_writer(log_dir_validation)
 
     callbacks = [
         keras.callbacks.ModelCheckpoint(filepath=(save_path / 'three_d_conv_best_model.h5'), monitor='val_loss',
@@ -83,16 +88,32 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     ]
 
     for epoch in range(epochs):
+        if stop_training:
+            break
         for step, (x_batch_train, y_batch_train) in enumerate(train_dataset):
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_mse_metric)
 
-        tf.summary.scalar('MSE distinct', data=train_mse_metric.result(), step=epoch)
+        with file_writer_train.as_default:
+            tf.summary.scalar('MSE', data=train_mse_metric.result(), step=epoch)
         train_mse_metric.reset_states()
 
         for x_batch_val, y_batch_val in validation_dataset:
             validation_step(x_batch_val, y_batch_val, validation_mse_metric)
-        tf.summary.scalar('MAE overlapping', data=validation_mse_metric.result(), step=epoch)
+        validation_loss = validation_mse_metric.result()
+
+        with file_writer_validation.as_default():
+            tf.summary.scalar('MAE overlapping', data=validation_loss, step=epoch)
         validation_mse_metric.reset_states()
+
+        # early stopping and save best model
+        if validation_loss < best_loss:
+            early_stopping_counter = 0
+            best_loss = validation_loss
+            model.save(save_path)
+        else:
+            early_stopping_counter += 1
+            if early_stopping_counter > patience:
+                stop_training = True
         # distinct_mae = mean_metrics.distinct_mean()
         # overlapping_mae = mean_metrics.overlapping_mean()
         # tf.summary.scalar('MAE distinct', data=distinct_mae, step=epoch)
@@ -117,7 +138,6 @@ def validation_step(model, loss_fn, x_batch_validation, y_batch_validation, vali
     predictions = model(x_batch_validation, training=True)
     loss_value = loss_fn(y_batch_validation, predictions)
     validation_mse_metric.update_state(loss_value)
-
 
 
 if __name__ == "__main__":

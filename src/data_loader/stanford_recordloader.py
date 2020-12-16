@@ -17,7 +17,7 @@ data_augmentation = keras.Sequential(
 
 
 def build_dataset_validation(file_names, batch_size):
-    return build_dataset(file_names, batch_size, None, 50, False, False, True)
+    return build_dataset(file_names, batch_size, None, None, False, False, True)
 
 
 def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, augment=False, shuffle=False,
