@@ -44,12 +44,12 @@ def generate_tf_record(input_directory, output_directory, metadata_filename, sta
     if output_directory is None:
         output_directory = input_directory
 
-    output_path = Path(output_directory)
+    output_path = Path(output_directory, 'tf_record')
     input_path = Path(input_directory)
 
-    train_folder = output_path / 'tf_record' / 'train'
-    test_folder = output_path / 'tf_record' / 'test'
-    validation_folder = output_path / 'tf_record' / 'validation'
+    train_folder = output_path / 'train'
+    test_folder = output_path / 'test'
+    validation_folder = output_path / 'validation'
 
     test_folder.mkdir(parents=True, exist_ok=True)
     train_folder.mkdir(exist_ok=True)
@@ -69,7 +69,7 @@ def generate_tf_record(input_directory, output_directory, metadata_filename, sta
     number_of_validation_samples = create_tf_record(input_path, validation_folder / 'validation_{}.tfrecord.gzip',
                                                     test_samples, needed_frames)
 
-    metadata_file_path = output_path / 'tf_record' / 'metadata.json'
+    metadata_file_path = output_path / 'metadata.json'
     if not metadata_file_path.is_file():
         print('Calculate mean and standard deviation.')
         mean, std = echo_base.calculate_train_mean_and_std(input_path, train_samples.FileName,
