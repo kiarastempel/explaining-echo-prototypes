@@ -1,5 +1,6 @@
 import argparse
 from datetime import datetime
+import tensorflow
 from tensorflow import keras
 from models import three_D_convolution_net
 import tensorflow_addons as tfa
@@ -7,7 +8,7 @@ import tensorflow as tf
 from data_loader import mainz_recordloader, stanford_recordloader
 from pathlib import Path
 import json
-from utils import mean_metrics
+#from utils import mean_metrics
 #just for tests
 #import matplotlib.pyplot as plt
 
@@ -73,7 +74,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     Path("../saved").mkdir(exist_ok=True)
     log_dir = Path("../logs", datetime.now().strftime("%Y%m%d-%H%M%S"))
     save_path = Path("../saved", datetime.now().strftime("%Y%m%d-%H%M%S"))
-    file_writer = tf.summary.create_file_writer(log_dir + "/metrics")
+    file_writer = tf.summary.create_file_writer(str(log_dir / "metrics"))
     file_writer.set_as_default()
 
     callbacks = [
