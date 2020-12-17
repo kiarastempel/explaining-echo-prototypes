@@ -42,6 +42,7 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
                                     columns=["FileName", "id", "view"])
     file_information["id"] = file_information["id"].astype(int)
     video_metadata = file_information.merge(file_list_data_frame, on="id", how="right")
+    video_metadata.dropna(inplace=True)
     a4c_video_metadata = video_metadata[video_metadata["view"] == "a4c"]
     a2c_video_metadata = video_metadata[video_metadata["view"] == "a2c"]
     psax_video_metadata = video_metadata[video_metadata["view"] == "psax"]
