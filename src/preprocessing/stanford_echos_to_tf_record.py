@@ -93,7 +93,7 @@ def create_tf_record(input_directory, output_file, samples, needed_frames):
                 end = len(samples)
             for file_name, ejection_fraction in zip(samples.FileName[start: end],
                                                     samples.EF[start: end]):
-                video = echo_base.load_video(str(input_directory / 'Videos' / file_name), needed_frames)
+                video = echo_base.load_video(input_directory / 'Videos' / file_name, needed_frames)
                 if video is not None:
                     number_used_videos += 1
                     writer.write(serialise_example(video, ejection_fraction))

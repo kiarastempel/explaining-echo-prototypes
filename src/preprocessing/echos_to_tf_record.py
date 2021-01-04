@@ -7,7 +7,9 @@ from tensorflow import train
 
 
 def extract_metadata(file_name, input_directory):
-    video = cv2.VideoCapture(str(input_directory / 'Videos' / file_name))
+    file_path = input_directory / file_name
+    file_path = file_path.with_suffix('.avi')
+    video = cv2.VideoCapture(str(file_path))
     frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
     return frame_width, frame_height
@@ -33,7 +35,8 @@ def save_metadata(output_file, frames_per_second, frame_width, frame_height, mea
 
 
 def load_video(file_name, needed_frames):
-    video = cv2.VideoCapture(file_name)
+    file_name = file_name.with_suffix('.avi')
+    video = cv2.VideoCapture(str(file_name))
     frame_list = []
     frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = int(video.get(cv2.CAP_PROP_FPS))
