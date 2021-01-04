@@ -92,7 +92,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
         for step, (x_batch_train, y_batch_train) in enumerate(train_dataset):
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_mse_metric)
 
-        with file_writer_train.as_default:
+        with file_writer_train.as_default():
             tf.summary.scalar('MSE', data=train_mse_metric.result(), step=epoch)
 
         for x_batch_val, y_batch_val in validation_dataset:
