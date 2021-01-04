@@ -17,16 +17,15 @@ data_augmentation = keras.Sequential(
 
 
 def build_dataset_validation(file_names, batch_size):
-    return build_dataset(file_names, batch_size, None, None, False, False, True)
+    return build_dataset(file_names, batch_size, None, None, False)
 
 
-def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, augment=False, shuffle=False,
-                  full_video=False):
+def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, augment=False):
     AUTOTUNE = tf.data.experimental.AUTOTUNE
     ds = tf.data.Dataset.list_files(file_names)
     ds = ds.interleave(lambda files: tf.data.TFRecordDataset(files, compression_type='GZIP'), cycle_length=AUTOTUNE,
                        num_parallel_calls=AUTOTUNE)
-    if shuffle:
+    if shuffle_size is not None:
         ds = ds.shuffle(shuffle_size)
     if augment:
         ds = ds.map(lambda x: parse_and_augment_example(x, number_of_input_frames),
@@ -51,7 +50,7 @@ def parse_example(example, number_of_input_frames):
 
 
 def parse_and_augment_example(example, number_of_input_frames):
-    parsed_example = tf.io.parse_example(example, self.feature_description)
+    parsed_example = tf.io.parse_example(example, feature_description)
     number_of_frames = parsed_example['number_of_frames']
     raw_frames = tf.sparse.to_dense(parsed_example['frames'])
     start = tf.cond(number_of_input_frames == number_of_frames,
