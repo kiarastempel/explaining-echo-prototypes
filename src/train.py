@@ -8,8 +8,10 @@ from data_loader import mainz_recordloader, stanford_recordloader
 from pathlib import Path
 import math
 import json
-#just for tests
-#import matplotlib.pyplot as plt
+
+
+# just for tests
+# import matplotlib.pyplot as plt
 
 
 def main():
@@ -48,14 +50,13 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         channels = metadata['channels']
 
     train_dataset = stanford_recordloader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
-                                                    number_input_frames)
-    validation_dataset = stanford_recordloader.build_dataset_validation(str(validation_record_file_name),
-                                                                        batch_size)
+                                                        number_input_frames)
+    validation_dataset = stanford_recordloader.build_dataset_validation(str(validation_record_file_name))
 
     # just for tests purposes
-    #for test in train_set.take(1):
-        #plt.imshow(test[0][0][10], cmap='gray')
-        #plt.show()
+    # for test in train_set.take(1):
+    # plt.imshow(test[0][0][10], cmap='gray')
+    # plt.show()
 
     model = three_D_convolution_net.ThreeDConvolutionVGGStanford(width, height, number_input_frames, channels, mean,
                                                                  std)
