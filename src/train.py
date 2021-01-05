@@ -17,7 +17,7 @@ import json
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory', default='../data', help="Directory with the TFRecord files.")
-    parser.add_argument('-b', '--batch_size', default=32, type=int)
+    parser.add_argument('-b', '--batch_size', default=16, type=int)
     parser.add_argument('-s', '--shuffle_size', default=1000, type=int)
     parser.add_argument('-e', '--epochs', default=200, type=int)
     parser.add_argument('-p', '--patience', default=10, type=int)
@@ -68,7 +68,6 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
 
 def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames):
     early_stopping_counter = 0
-    stop_training = False
     best_loss = math.inf
     train_mse_metric = keras.metrics.MeanSquaredError()
     validation_mse_metric = keras.metrics.MeanSquaredError()
@@ -81,20 +80,20 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     log_dir = Path("../logs", datetime.now().strftime("%Y%m%d-%H%M%S"))
     log_dir_train = log_dir / 'train'
     log_dir_validation = log_dir / 'validation'
-    save_path = Path('../saved', datetime.now().strftime("%Y%m%d-%H%M%S"), 'three_d_conv_best_model.h5')
+    save_path = Path('../saved', datetime.now().strftime("%Y%m%d-%H%M%S"), 'three_d_conv_best_model')
     file_writer_train = tf.summary.create_file_writer(str(log_dir_train))
     file_writer_validation = tf.summary.create_file_writer(str(log_dir_validation))
 
     for epoch in range(epochs):
         for metric in (train_mse_metric, validation_mse_metric, validation_mae_metric, validation_mae_metric_distinct,
-                   validation_mae_metric_overlapping):
+                       validation_mae_metric_overlapping):
             metric.reset_states()
 
-        for step, (x_batch_train, y_batch_train) in enumerate(train_dataset):
+        for x_batch_train, y_batch_train in train_dataset:
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_mse_metric)
 
         with file_writer_train.as_default():
-            tf.summary.scalar('MSE', data=train_mse_metric.result(), step=epoch)
+            tf.summary.scalar('epoch_loss', data=train_mse_metric.result(), step=epoch)
 
         for x_batch_val, y_batch_val in validation_dataset:
             first_frames = get_first_frames(x_batch_val, number_input_frames)
@@ -102,8 +101,8 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             overlapping_splits = get_overlapping_splits(x_batch_val, number_input_frames)
             validation_step(model, first_frames, y_batch_val, validation_mse_metric)
             validation_step(model, first_frames, y_batch_val, validation_mae_metric)
-            validation_step(model, distinct_splits, y_batch_val, validation_mae_metric)
-            validation_step(model, overlapping_splits, y_batch_val, validation_mae_metric)
+            validation_step(model, distinct_splits, y_batch_val, validation_mae_metric_distinct)
+            validation_step(model, overlapping_splits, y_batch_val, validation_mae_metric_overlapping)
 
         validation_mse = validation_mse_metric.result()
         validation_mae = validation_mae_metric.result()
@@ -120,7 +119,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
         if validation_mse < best_loss:
             early_stopping_counter = 0
             best_loss = validation_mse
-            model.save(str(save_path))
+            model.save(str(save_path), save_format="tf")
         else:
             early_stopping_counter += 1
             if early_stopping_counter > patience:
@@ -140,38 +139,37 @@ def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_ms
     return loss_value
 
 
-@tf.function
+@tf.function(experimental_relax_shapes=True)
 def validation_step(model, x_validation, y_validation, validation_metric):
-    y_validation = tf.repeat(y_validation, x_validation.shape[0])
     predictions = model(x_validation, training=False)
-    mean_prediction = tf.reduce_mean(predictions)
+    mean_prediction = tf.reduce_mean(predictions, keepdims=True)
     validation_metric.update_state(y_validation, mean_prediction)
 
 
 def get_distinct_splits(video, number_of_frames):
-    number_of_subvideos = int(video.shape(0) / number_of_frames)
+    number_of_subvideos = int(video.shape[1] / number_of_frames)
     subvideos = []
     for i in range(number_of_subvideos):
         start = i * number_of_frames
         end = start + number_of_frames
-        subvideos.append(video[start: end:, :, :, :])
-    return tf.stack(subvideos)
+        subvideos.append(video[:, start: end:, :, :, :])
+    return tf.concat(subvideos, 0)
 
 
 def get_overlapping_splits(video, number_of_frames):
-    number_of_subvideos = int(video.shape(0) / (number_of_frames / 2)) - 1
-    half_number_of_frames= int(number_of_frames / 2)
+    number_of_subvideos = int(video.shape[1] / (number_of_frames / 2)) - 1
+    half_number_of_frames = int(number_of_frames / 2)
     subvideos = []
 
     for i in range(number_of_subvideos):
         start = i * half_number_of_frames
         end = start + number_of_frames
-        subvideos.append(video[start: end:, :, :, :])
-    return tf.stack(subvideos)
+        subvideos.append(video[:, start: end:, :, :, :])
+    return tf.concat(subvideos, 0)
 
 
 def get_first_frames(video, number_of_frames):
-    return video[: number_of_frames, :, :, :]
+    return video[:, :number_of_frames, :, :, :]
 
 
 if __name__ == "__main__":
