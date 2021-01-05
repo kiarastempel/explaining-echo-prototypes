@@ -63,10 +63,10 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
     # opt = tfa.optimizers.SWA(opt, start_averaging=m, average_period=k)
-    train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn)
+    train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames)
 
 
-def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn):
+def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames):
     early_stopping_counter = 0
     stop_training = False
     best_loss = math.inf
@@ -75,8 +75,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     validation_mae_metric = keras.metrics.MeanAbsoluteError()
     validation_mae_metric_distinct = keras.metrics.MeanAbsoluteError()
     validation_mae_metric_overlapping = keras.metrics.MeanAbsoluteError()
-    all_metrics = [train_mse_metric, validation_mse_metric, validation_mae_metric, validation_mae_metric_distinct,
-                   validation_mae_metric_overlapping]
+
     Path("../logs").mkdir(exist_ok=True)
     Path("../saved").mkdir(exist_ok=True)
     log_dir = Path("../logs", datetime.now().strftime("%Y%m%d-%H%M%S"))
@@ -87,7 +86,8 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     file_writer_validation = tf.summary.create_file_writer(str(log_dir_validation))
 
     for epoch in range(epochs):
-        for metric in all_metrics:
+        for metric in (train_mse_metric, validation_mse_metric, validation_mae_metric, validation_mae_metric_distinct,
+                   validation_mae_metric_overlapping):
             metric.reset_states()
 
         for step, (x_batch_train, y_batch_train) in enumerate(train_dataset):
@@ -97,8 +97,13 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             tf.summary.scalar('MSE', data=train_mse_metric.result(), step=epoch)
 
         for x_batch_val, y_batch_val in validation_dataset:
-            validation_step(model, x_batch_val, y_batch_val, validation_mse_metric)
-            validation_step(model, x_batch_val, y_batch_val, validation_mae_metric)
+            first_frames = get_first_frames(x_batch_val, number_input_frames)
+            distinct_splits = get_distinct_splits(x_batch_val, number_input_frames)
+            overlapping_splits = get_overlapping_splits(x_batch_val, number_input_frames)
+            validation_step(model, first_frames, y_batch_val, validation_mse_metric)
+            validation_step(model, first_frames, y_batch_val, validation_mae_metric)
+            validation_step(model, distinct_splits, y_batch_val, validation_mae_metric)
+            validation_step(model, overlapping_splits, y_batch_val, validation_mae_metric)
 
         validation_mse = validation_mse_metric.result()
         validation_mae = validation_mae_metric.result()
@@ -106,16 +111,16 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
         validation_mae_distinct = validation_mae_metric_distinct.result()
 
         with file_writer_validation.as_default():
-            tf.summary.scalar('MSE', data=validation_mse, step=epoch)
-            tf.summary.scalar('MAE', data=validation_mae, step=epoch)
-            tf.summary.scalar('MAE overlapping', data=validation_mae_overlapping, step=epoch)
-            tf.summary.scalar('MAE distinct', data=validation_mae_distinct, step=epoch)
+            tf.summary.scalar('epoch_loss', data=validation_mse, step=epoch)
+            tf.summary.scalar('epoch_mae', data=validation_mae, step=epoch)
+            tf.summary.scalar('epoch_mae_overlapping', data=validation_mae_overlapping, step=epoch)
+            tf.summary.scalar('epoch_mae_distinct', data=validation_mae_distinct, step=epoch)
 
         # early stopping and save best model
         if validation_mse < best_loss:
             early_stopping_counter = 0
             best_loss = validation_mse
-            model.save(save_path)
+            model.save(str(save_path))
         else:
             early_stopping_counter += 1
             if early_stopping_counter > patience:
@@ -137,17 +142,36 @@ def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_ms
 
 @tf.function
 def validation_step(model, x_validation, y_validation, validation_metric):
+    y_validation = tf.repeat(y_validation, x_validation.shape[0])
     predictions = model(x_validation, training=False)
     mean_prediction = tf.reduce_mean(predictions)
     validation_metric.update_state(y_validation, mean_prediction)
 
 
-def split_distinct():
-    pass
+def get_distinct_splits(video, number_of_frames):
+    number_of_subvideos = int(video.shape(0) / number_of_frames)
+    subvideos = []
+    for i in range(number_of_subvideos):
+        start = i * number_of_frames
+        end = start + number_of_frames
+        subvideos.append(video[start: end:, :, :, :])
+    return tf.stack(subvideos)
 
 
-def split_overlapping():
-    pass
+def get_overlapping_splits(video, number_of_frames):
+    number_of_subvideos = int(video.shape(0) / (number_of_frames / 2)) - 1
+    half_number_of_frames= int(number_of_frames / 2)
+    subvideos = []
+
+    for i in range(number_of_subvideos):
+        start = i * half_number_of_frames
+        end = start + number_of_frames
+        subvideos.append(video[start: end:, :, :, :])
+    return tf.stack(subvideos)
+
+
+def get_first_frames(video, number_of_frames):
+    return video[: number_of_frames, :, :, :]
 
 
 if __name__ == "__main__":
