@@ -7,7 +7,7 @@ from tensorflow import train
 
 
 def extract_metadata(file_name, input_directory):
-    file_path = input_directory / file_name
+    file_path = input_directory / 'Videos' / file_name
     file_path = file_path.with_suffix('.avi')
     video = cv2.VideoCapture(str(file_path))
     frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -62,7 +62,9 @@ def calculate_train_mean_and_std(input_directory, file_names, standardisation_sa
         standardisation_sample = len(file_names)
     filenames_to_use = file_names[0:standardisation_sample]
     for file_name in tqdm(filenames_to_use, file=sys.stdout):
-        video = cv2.VideoCapture(str(input_directory / 'Videos' / file_name))
+        file_path = input_directory / 'Videos' / file_name
+        file_path = file_path.with_suffix('.avi')
+        video = cv2.VideoCapture(str(file_path))
         frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
         for index in range(frame_count):
             ret, frame = video.read()
