@@ -1,7 +1,7 @@
 import argparse
 from datetime import datetime
 from tensorflow import keras
-from models import three_D_convolution_net
+from models import three_D_vgg_net
 import tensorflow_addons as tfa
 import tensorflow as tf
 from data_loader import mainz_recordloader, stanford_recordloader
@@ -24,6 +24,7 @@ def main():
     parser.add_argument('-l', '--learning_rate', default=0.01, type=float)
     parser.add_argument('-f', '--number_input_frames', default=50, type=int)
     parser.add_argument('--dataset', default='stanford', choices=['stanford', 'mainz'])
+    parser.add_argument('-m', '--model', default='vgg', choices=['vgg', 'resnet', 'se-resnet'])
     args = parser.parse_args()
 
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
@@ -58,8 +59,8 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     # plt.imshow(test[0][0][10], cmap='gray')
     # plt.show()
 
-    model = three_D_convolution_net.ThreeDConvolutionVGGStanford(width, height, number_input_frames, channels, mean,
-                                                                 std)
+    model = three_D_vgg_net.ThreeDConvolutionVGGStanford(width, height, number_input_frames, channels, mean,
+                                                         std)
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
     # opt = tfa.optimizers.SWA(opt, start_averaging=m, average_period=k)
@@ -89,13 +90,13 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
                        validation_mae_metric_overlapping):
             metric.reset_states()
 
-        for x_batch_train, y_batch_train in train_dataset:
+        for x_batch_train, y_batch_train in train_dataset.take(1):
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_mse_metric)
 
         with file_writer_train.as_default():
             tf.summary.scalar('epoch_loss', data=train_mse_metric.result(), step=epoch)
 
-        for x_batch_val, y_batch_val in validation_dataset:
+        for x_batch_val, y_batch_val in validation_dataset.take(1):
             first_frames = get_first_frames(x_batch_val, number_input_frames)
             distinct_splits = get_distinct_splits(x_batch_val, number_input_frames)
             overlapping_splits = get_overlapping_splits(x_batch_val, number_input_frames)

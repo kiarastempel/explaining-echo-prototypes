@@ -1,0 +1,92 @@
+from tensorflow import keras
+import tensorflow as tf
+
+
+class CustomConv3D(keras.layers.Layer):
+    def __init__(self, kernel_number, kernel_size, strides=0, use_bn=False, **kwargs):
+        super(CustomConv3D, self).__init__(**kwargs)
+        self.custom_conv_3d = keras.Sequential()
+        self.custom_conv_3d.add(keras.layers.Conv3D(kernel_number, kernel_size, strides))
+        if use_bn:
+            self.custom_conv_3d.add(keras.layers.BatchNormalization())
+        self.custom_conv_3d.add(keras.layers.ReLU())
+
+    def call(self, inputs, training=None):
+        return self.conv3d(inputs)
+
+
+class ResidualBlock(keras.layers.Layer):
+    def __init__(self, kernel_number, kernel_size, **kwargs):
+        super(ResidualBlock, self).__init__(**kwargs)
+        self.resnet_block = keras.Sequential(
+            [
+                CustomConv3D(kernel_number, kernel_size, 0, use_bn=True),
+                keras.layers.Conv3D(kernel_number, kernel_size),
+                keras.layers.BatchNormalization()
+            ]
+        )
+        self.relu = keras.layers.ReLU()
+
+    def call(self, inputs, training=None):
+        intermediate_output = self.resnet_block(inputs)
+        output_sum = tf.add(intermediate_output, inputs)
+        return self.relu(output_sum)
+
+
+class ResidualBottleneckBlock(keras.layers.Layer):
+    def __init__(self, kernel_number, kernel_size, **kwargs):
+        super(ResidualBottleneckBlock, self).__init__(**kwargs)
+        self.resnet_bottleneck_block = keras.Sequential(
+            [
+                CustomConv3D(kernel_number, 1, use_bn=True),
+                CustomConv3D(kernel_number, kernel_size, use_bn=True),
+                keras.layers.Conv3D(kernel_number * 4, 1),
+                keras.layers.BatchNormalization()
+            ]
+        )
+        self.relu = keras.layers.ReLU()
+
+    def call(self, inputs, **kwargs):
+        intermediate_output = self.resnet_bottleneck_block(inputs)
+        output_sum = tf.add(intermediate_output, inputs)
+        return self.relu(output_sum)
+
+
+class ResidualConvBlock(keras.layers.Layer):
+    def __init__(self, kernel_number, kernel_size, **kwargs):
+        super(ResidualConvBlock, self).__init__(**kwargs)
+        self.resnet_block = keras.Sequential(
+            [
+                CustomConv3D(kernel_number, kernel_size, 0, use_bn=True),
+                keras.layers.Conv3D(kernel_number, kernel_size),
+                keras.layers.BatchNormalization()
+            ]
+        )
+        self.relu = keras.layers.ReLU()
+
+    def call(self, inputs, training=None):
+        intermediate_output = self.resnet_bottleneck_block(inputs)
+        shortcut = self.shortcut_conv(inputs)
+        output_sum = tf.add(intermediate_output, shortcut)
+        return self.relu(output_sum)
+
+
+class ResidualConvBottleneckBlock(keras.layers.Layer):
+    def __init__(self, kernel_number, kernel_size, **kwargs):
+        super(ResidualConvBottleneckBlock, self).__init__(**kwargs)
+        self.resnet_bottleneck_block = keras.Sequential(
+            [
+                CustomConv3D(kernel_number, 1, use_bn=True),
+                CustomConv3D(kernel_number, kernel_size, use_bn=True),
+                keras.layers.Conv3D(kernel_number * 4, 1),
+                keras.layers.BatchNormalization()
+            ]
+        )
+        self.relu = keras.layers.ReLU()
+        self.shortcut_conv = keras.layers.Conv3D(kernel_number * 4, 1)
+
+    def call(self, inputs, **kwargs):
+        intermediate_output = self.resnet_bottleneck_block(inputs)
+        shortcut = self.shortcut_conv(inputs)
+        output_sum = tf.add(intermediate_output, shortcut)
+        return self.relu(output_sum)
