@@ -2,13 +2,11 @@ import argparse
 from datetime import datetime
 from tensorflow import keras
 from models import three_D_vgg_net
-import tensorflow_addons as tfa
 import tensorflow as tf
 from data_loader import mainz_recordloader, stanford_recordloader
 from pathlib import Path
 import math
 import json
-
 
 # just for tests
 # import matplotlib.pyplot as plt
@@ -63,7 +61,6 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
                                                          std)
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
-    # opt = tfa.optimizers.SWA(opt, start_averaging=m, average_period=k)
     train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames)
 
 
@@ -125,8 +122,6 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             early_stopping_counter += 1
             if early_stopping_counter > patience:
                 break
-
-    # TODO implement swa
 
 
 @tf.function

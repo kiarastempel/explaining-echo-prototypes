@@ -90,3 +90,18 @@ class ResidualConvBottleneckBlock(keras.layers.Layer):
         shortcut = self.shortcut_conv(inputs)
         output_sum = tf.add(intermediate_output, shortcut)
         return self.relu(output_sum)
+
+
+class SqueezeAndExcitationPath(keras.layers.Layer):
+    def __init__(self, channel, ratio=16, **kwargs):
+        super(SqueezeAndExcitationPath, self).__init__(**kwargs)
+        self.se_path = keras.Sequential(
+            [
+                keras.layers.GlobalAvgPool3D(),
+                keras.layers.Dense(int(channel/ratio), activation='relu'),
+                keras.layers.Dense(channel, activation='sigmoid'),
+            ]
+        )
+
+    def call(self, inputs, **kwargs):
+        return self.se_path(inputs)
