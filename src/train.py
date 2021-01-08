@@ -98,13 +98,13 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     file_writer_validation = tf.summary.create_file_writer(str(log_dir_validation))
 
     for epoch in range(epochs):
-        for x_batch_train, y_batch_train in train_dataset.take(1):
+        for x_batch_train, y_batch_train in train_dataset:
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_mse_metric)
 
         with file_writer_train.as_default():
             tf.summary.scalar('epoch_loss', data=train_mse_metric.result(), step=epoch)
 
-        for x_batch_val, y_batch_val in validation_dataset.take(1):
+        for x_batch_val, y_batch_val in validation_dataset:
             first_frames = get_first_frames(x_batch_val, number_input_frames)
             # distinct_splits = get_distinct_splits(x_batch_val, number_input_frames)
             # overlapping_splits = get_overlapping_splits(x_batch_val, number_input_frames)
@@ -132,7 +132,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
         if validation_mse < best_loss:
             early_stopping_counter = 0
             best_loss = validation_mse
-            model.save(str(save_path), save_format="tf")
+            # model.save(str(save_path), save_format="tf")
         else:
             early_stopping_counter += 1
             if early_stopping_counter > patience:

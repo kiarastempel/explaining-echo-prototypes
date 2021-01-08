@@ -19,14 +19,14 @@ class ThreeDConvolutionResNet18(keras.Model):
             ResidualBlock(64, 3),
             ResidualBlock(64, 3),
 
-            ResidualConvBlock(3, 128, 2),
-            ResidualBlock(3, 128),
+            # ResidualConvBlock(3, 128, 2),
+            # ResidualBlock(3, 128),
 
-            ResidualConvBlock(3, 256, 2),
-            ResidualBlock(3, 256),
+            # ResidualConvBlock(3, 256, 2),
+            # ResidualBlock(3, 256),
 
-            ResidualConvBlock(3, 512, 2),
-            ResidualBlock(3, 512),
+            # ResidualConvBlock(3, 512, 2),
+            # ResidualBlock(3, 512),
 
             # fix resnet tail
             keras.layers.GlobalAvgPool3D(),
