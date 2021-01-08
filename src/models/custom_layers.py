@@ -63,6 +63,7 @@ class ResidualConvBlock(keras.layers.Layer):
             ]
         )
         self.relu = keras.layers.ReLU()
+        self.shortcut_conv = keras.layers.Conv3D(kernel_number * 2, 1)
 
     def call(self, inputs, training=None):
         intermediate_output = self.resnet_conv_block(inputs)
