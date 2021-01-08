@@ -26,10 +26,11 @@ def main():
     args = parser.parse_args()
 
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
-          Path(args.input_directory))
+          Path(args.input_directory), args.dataset, args.model)
 
 
-def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_input_frames, input_directory):
+def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_input_frames, input_directory, dataset,
+          model):
     tf.random.set_seed(5)
 
     train_record_file_name = input_directory / 'tf_record' / 'train' / 'train_*.tfrecord.gzip'
