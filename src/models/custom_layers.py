@@ -6,7 +6,7 @@ class CustomConv3D(keras.layers.Layer):
     def __init__(self, kernel_number, kernel_size, strides=1, use_bn=False, padding='valid', **kwargs):
         super(CustomConv3D, self).__init__(**kwargs)
         self.custom_conv_3d = keras.Sequential()
-        self.custom_conv_3d.add(keras.layers.Conv3D(kernel_number, kernel_size, strides))
+        self.custom_conv_3d.add(keras.layers.Conv3D(kernel_number, kernel_size, strides, padding=padding))
         if use_bn:
             self.custom_conv_3d.add(keras.layers.BatchNormalization())
         self.custom_conv_3d.add(keras.layers.ReLU())
