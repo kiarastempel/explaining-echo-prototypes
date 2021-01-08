@@ -7,7 +7,7 @@ class CustomConv3D(keras.layers.Layer):
         super(CustomConv3D, self).__init__(**kwargs)
         self.custom_conv_3d = keras.Sequential()
         self.custom_conv_3d.add(keras.layers.Conv3D(kernel_number, kernel_size, strides, padding=padding,
-            use_bias= not use_bn))
+                                                    use_bias=not use_bn))
         if use_bn:
             self.custom_conv_3d.add(keras.layers.BatchNormalization())
         self.custom_conv_3d.add(keras.layers.ReLU())
@@ -65,11 +65,11 @@ class ResidualConvBlock(keras.layers.Layer):
         )
         self.relu = keras.layers.ReLU()
         self.shortcut_conv = keras.Sequential(
-                [
-                    keras.layers.Conv3D(kernel_number, 1, strides=strides),
-                    # keras.layers.BatchNormalization()
-                    ]
-                )
+            [
+                keras.layers.Conv3D(kernel_number, 1, strides=strides),
+                # keras.layers.BatchNormalization()
+            ]
+        )
 
     def call(self, inputs, training=None):
         intermediate_output = self.resnet_conv_block(inputs)
@@ -93,8 +93,8 @@ class ResidualConvBottleneckBlock(keras.layers.Layer):
         self.shortcut_conv = keras.Sequential([
             keras.layers.Conv3D(kernel_number * 4, 1, strides=strides),
             keras.layers.BatchNormalization()
-            ]
-            )
+        ]
+        )
 
     def call(self, inputs, **kwargs):
         intermediate_output = self.resnet_conv_bottleneck_block(inputs)
@@ -109,7 +109,7 @@ class SqueezeAndExcitationPath(keras.layers.Layer):
         self.se_path = keras.Sequential(
             [
                 keras.layers.GlobalAvgPool3D(),
-                keras.layers.Dense(int(channel/ratio), activation='relu'),
+                keras.layers.Dense(int(channel / ratio), activation='relu'),
                 keras.layers.Dense(channel, activation='sigmoid'),
             ]
         )

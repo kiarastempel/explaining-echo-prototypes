@@ -19,14 +19,14 @@ class ThreeDConvolutionResNet18(keras.Model):
             ResidualBlock(64, 3),
             ResidualBlock(64, 3),
 
-            # ResidualConvBlock(3, 128, 2),
-            # ResidualBlock(3, 128),
+            ResidualConvBlock(128, 3, 2),
+            ResidualBlock(128, 3),
 
-            # ResidualConvBlock(3, 256, 2),
-            # ResidualBlock(3, 256),
+            ResidualConvBlock(256, 3, 2),
+            ResidualBlock(256, 3),
 
-            # ResidualConvBlock(3, 512, 2),
-            # ResidualBlock(3, 512),
+            ResidualConvBlock(512, 3, 2),
+            ResidualBlock(512, 3),
 
             # fix resnet tail
             keras.layers.GlobalAvgPool3D(),
@@ -57,21 +57,21 @@ class ThreeDConvolutionResNet34(keras.Model):
             ResidualBlock(64, 3),
             ResidualBlock(64, 3),
 
-            ResidualConvBlock(3, 128, 2),
-            ResidualBlock(3, 128),
-            ResidualBlock(3, 128),
-            ResidualBlock(3, 128),
+            ResidualConvBlock(128, 3, 2),
+            ResidualBlock(128, 3),
+            ResidualBlock(128, 3),
+            ResidualBlock(128, 3),
 
-            ResidualConvBlock(3, 256, 2),
-            ResidualBlock(3, 256),
-            ResidualBlock(3, 256),
-            ResidualBlock(3, 256),
-            ResidualBlock(3, 256),
-            ResidualBlock(3, 256),
+            ResidualConvBlock(256, 2),
+            ResidualBlock(256, 3),
+            ResidualBlock(256, 3),
+            ResidualBlock(256, 3),
+            ResidualBlock(256, 3),
+            ResidualBlock(256, 3),
 
-            ResidualConvBlock(3, 512, 2),
-            ResidualBlock(3, 512),
-            ResidualBlock(3, 512),
+            ResidualConvBlock(512, 3, 2),
+            ResidualBlock(512, 3),
+            ResidualBlock(512, 3),
 
             # fix resnet tail
             keras.layers.GlobalAvgPool3D(),
@@ -98,25 +98,25 @@ class ThreeDConvolutionResNet50(keras.Model):
             keras.layers.MaxPool3D(3, 2),
 
             # variable 3 layer blocks
-            ResidualConvBottleneckBlock(3, 64, 2),
-            ResidualBottleneckBlock(3, 64),
-            ResidualBottleneckBlock(3, 64),
+            ResidualConvBottleneckBlock(64, 3, 2),
+            ResidualBottleneckBlock(64, 3),
+            ResidualBottleneckBlock(64, 3),
 
-            ResidualConvBottleneckBlock(3, 128, 2),
-            ResidualBottleneckBlock(3, 128),
-            ResidualBottleneckBlock(3, 128),
-            ResidualBottleneckBlock(3, 128),
+            ResidualConvBottleneckBlock(128, 3, 2),
+            ResidualBottleneckBlock(128, 3),
+            ResidualBottleneckBlock(128, 3),
+            ResidualBottleneckBlock(128, 3),
 
-            ResidualConvBottleneckBlock(3, 256, 2),
-            ResidualBottleneckBlock(3, 256),
-            ResidualBottleneckBlock(3, 256),
-            ResidualBottleneckBlock(3, 256),
-            ResidualBottleneckBlock(3, 256),
-            ResidualBottleneckBlock(3, 256),
+            ResidualConvBottleneckBlock(256, 3, 2),
+            ResidualBottleneckBlock(256, 3),
+            ResidualBottleneckBlock(256, 3),
+            ResidualBottleneckBlock(256, 3),
+            ResidualBottleneckBlock(256, 3),
+            ResidualBottleneckBlock(256, 3),
 
-            ResidualConvBottleneckBlock(3, 512, 2),
-            ResidualBottleneckBlock(3, 512),
-            ResidualBottleneckBlock(3, 512),
+            ResidualConvBottleneckBlock(512, 3, 2),
+            ResidualBottleneckBlock(512, 3),
+            ResidualBottleneckBlock(512, 3),
 
             # fix resnet tail
             keras.layers.GlobalAvgPool3D(),

@@ -21,7 +21,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory', default='../data', help="Directory with the TFRecord files.")
     parser.add_argument('-b', '--batch_size', default=16, type=int)
-    parser.add_argument('-s', '--shuffle_size', default=1000, type=int)
+    parser.add_argument('-s', '--shuffle_size', default=1024, type=int)
     parser.add_argument('-e', '--epochs', default=200, type=int)
     parser.add_argument('-p', '--patience', default=10, type=int)
     parser.add_argument('-l', '--learning_rate', default=0.01, type=float)
@@ -126,8 +126,8 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             # tf.summary.scalar('epoch_mae_overlapping', data=validation_mae_overlapping, step=epoch)
             # tf.summary.scalar('epoch_mae_distinct', data=validation_mae_distinct, step=epoch)
 
-        for metric in (train_mse_metric, train_mae_metric, validation_mse_metric, validation_mae_metric, validation_mae_metric_distinct,
-                       validation_mae_metric_overlapping):
+        for metric in (train_mse_metric, train_mae_metric, validation_mse_metric, validation_mae_metric,
+                       validation_mae_metric_distinct, validation_mae_metric_overlapping):
             metric.reset_states()
 
         # early stopping and save best model
