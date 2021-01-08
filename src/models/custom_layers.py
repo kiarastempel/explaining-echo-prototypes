@@ -3,7 +3,7 @@ import tensorflow as tf
 
 
 class CustomConv3D(keras.layers.Layer):
-    def __init__(self, kernel_number, kernel_size, strides=0, use_bn=False, **kwargs):
+    def __init__(self, kernel_number, kernel_size, strides=1, use_bn=False, **kwargs):
         super(CustomConv3D, self).__init__(**kwargs)
         self.custom_conv_3d = keras.Sequential()
         self.custom_conv_3d.add(keras.layers.Conv3D(kernel_number, kernel_size, strides))
