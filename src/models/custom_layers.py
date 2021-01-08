@@ -12,7 +12,7 @@ class CustomConv3D(keras.layers.Layer):
         self.custom_conv_3d.add(keras.layers.ReLU())
 
     def call(self, inputs, training=None):
-        return self.conv3d(inputs)
+        return self.custom_conv_3d(inputs)
 
 
 class ResidualBlock(keras.layers.Layer):
