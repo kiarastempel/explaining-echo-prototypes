@@ -6,7 +6,8 @@ class CustomConv3D(keras.layers.Layer):
     def __init__(self, kernel_number, kernel_size, strides=1, use_bn=False, padding='valid', **kwargs):
         super(CustomConv3D, self).__init__(**kwargs)
         self.custom_conv_3d = keras.Sequential()
-        self.custom_conv_3d.add(keras.layers.Conv3D(kernel_number, kernel_size, strides, padding=padding))
+        self.custom_conv_3d.add(keras.layers.Conv3D(kernel_number, kernel_size, strides, padding=padding,
+            use_bias= not use_bn))
         if use_bn:
             self.custom_conv_3d.add(keras.layers.BatchNormalization())
         self.custom_conv_3d.add(keras.layers.ReLU())
@@ -21,7 +22,7 @@ class ResidualBlock(keras.layers.Layer):
         self.resnet_block = keras.Sequential(
             [
                 CustomConv3D(kernel_number, kernel_size, 1, padding='same', use_bn=True),
-                keras.layers.Conv3D(kernel_number, kernel_size, padding='same'),
+                keras.layers.Conv3D(kernel_number, kernel_size, padding='same', use_bias=False),
                 keras.layers.BatchNormalization()
             ]
         )
@@ -38,9 +39,9 @@ class ResidualBottleneckBlock(keras.layers.Layer):
         super(ResidualBottleneckBlock, self).__init__(**kwargs)
         self.resnet_bottleneck_block = keras.Sequential(
             [
-                CustomConv3D(kernel_number, use_bn=True),
+                CustomConv3D(kernel_number, 1, use_bn=True),
                 CustomConv3D(kernel_number, kernel_size, padding='same', use_bn=True),
-                keras.layers.Conv3D(kernel_number * 4, 1),
+                keras.layers.Conv3D(kernel_number * 4, 1, use_bias=False),
                 keras.layers.BatchNormalization()
             ]
         )
@@ -53,17 +54,22 @@ class ResidualBottleneckBlock(keras.layers.Layer):
 
 
 class ResidualConvBlock(keras.layers.Layer):
-    def __init__(self, kernel_number, kernel_size, stride=1, **kwargs):
+    def __init__(self, kernel_number, kernel_size, strides=1, **kwargs):
         super(ResidualConvBlock, self).__init__(**kwargs)
         self.resnet_conv_block = keras.Sequential(
             [
-                CustomConv3D(kernel_number, kernel_size, stride=stride, padding='same', use_bn=True),
-                keras.layers.Conv3D(kernel_number, kernel_size, padding='same'),
+                CustomConv3D(kernel_number, kernel_size, strides=strides, padding='same', use_bn=True),
+                keras.layers.Conv3D(kernel_number, kernel_size, padding='same', use_bias=False),
                 keras.layers.BatchNormalization()
             ]
         )
         self.relu = keras.layers.ReLU()
-        self.shortcut_conv = keras.layers.Conv3D(kernel_number * 2, 1)
+        self.shortcut_conv = keras.Sequential(
+                [
+                    keras.layers.Conv3D(kernel_number, 1, strides=strides),
+                    keras.layers.BatchNormalization()
+                    ]
+                )
 
     def call(self, inputs, training=None):
         intermediate_output = self.resnet_conv_block(inputs)
@@ -73,18 +79,22 @@ class ResidualConvBlock(keras.layers.Layer):
 
 
 class ResidualConvBottleneckBlock(keras.layers.Layer):
-    def __init__(self, kernel_number, kernel_size, stride=1, **kwargs):
+    def __init__(self, kernel_number, kernel_size, strides=1, **kwargs):
         super(ResidualConvBottleneckBlock, self).__init__(**kwargs)
         self.resnet_conv_bottleneck_block = keras.Sequential(
             [
-                CustomConv3D(kernel_number, 1, stride=stride, use_bn=True),
+                CustomConv3D(kernel_number, 1, strides=strides, use_bn=True),
                 CustomConv3D(kernel_number, kernel_size, padding='same', use_bn=True),
-                keras.layers.Conv3D(kernel_number * 4, 1),
+                keras.layers.Conv3D(kernel_number * 4, 1, use_bias=False),
                 keras.layers.BatchNormalization()
             ]
         )
         self.relu = keras.layers.ReLU()
-        self.shortcut_conv = keras.layers.Conv3D(kernel_number * 4, 1)
+        self.shortcut_conv = keras.Sequential([
+            keras.layers.Conv3D(kernel_number * 4, 1, strides=strides),
+            keras.layers.BatchNormalization()
+            ]
+            )
 
     def call(self, inputs, **kwargs):
         intermediate_output = self.resnet_conv_bottleneck_block(inputs)

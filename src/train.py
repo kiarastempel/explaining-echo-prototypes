@@ -1,16 +1,17 @@
 import argparse
 from utils import choose_gpu
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
+print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from datetime import datetime
-from tensorflow import keras
 from models import three_D_vgg_net, three_D_resnet
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from data_loader import mainz_recordloader, stanford_recordloader
 from pathlib import Path
 import math
 import json
-os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
 import tensorflow as tf
+from tensorflow import keras
 
 # just for tests
 # import matplotlib.pyplot as plt
