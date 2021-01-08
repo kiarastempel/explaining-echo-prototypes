@@ -21,9 +21,9 @@ class ResidualBlock(keras.layers.Layer):
         super(ResidualBlock, self).__init__(**kwargs)
         self.resnet_block = keras.Sequential(
             [
-                CustomConv3D(kernel_number, kernel_size, 1, padding='same', use_bn=False),
+                CustomConv3D(kernel_number, kernel_size, 1, padding='same', use_bn=True),
                 keras.layers.Conv3D(kernel_number, kernel_size, padding='same', use_bias=False),
-                # keras.layers.BatchNormalization()
+                keras.layers.BatchNormalization()
             ]
         )
         self.relu = keras.layers.ReLU()
@@ -58,16 +58,16 @@ class ResidualConvBlock(keras.layers.Layer):
         super(ResidualConvBlock, self).__init__(**kwargs)
         self.resnet_conv_block = keras.Sequential(
             [
-                CustomConv3D(kernel_number, kernel_size, strides=strides, padding='same', use_bn=False),
+                CustomConv3D(kernel_number, kernel_size, strides=strides, padding='same', use_bn=True),
                 keras.layers.Conv3D(kernel_number, kernel_size, padding='same', use_bias=False),
-                # keras.layers.BatchNormalization()
+                keras.layers.BatchNormalization()
             ]
         )
         self.relu = keras.layers.ReLU()
         self.shortcut_conv = keras.Sequential(
             [
                 keras.layers.Conv3D(kernel_number, 1, strides=strides),
-                # keras.layers.BatchNormalization()
+                keras.layers.BatchNormalization()
             ]
         )
 
