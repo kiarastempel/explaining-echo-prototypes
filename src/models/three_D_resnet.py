@@ -1,5 +1,5 @@
 from tensorflow import keras
-from custom_layers import ResidualBlock, ResidualBottleneckBlock, ResidualConvBlock, ResidualConvBottleneckBlock
+from models.custom_layers import ResidualBlock, ResidualBottleneckBlock, ResidualConvBlock, ResidualConvBottleneckBlock
 
 
 class ThreeDConvolutionResNet18(keras.Model):

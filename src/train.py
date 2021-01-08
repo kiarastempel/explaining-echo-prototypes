@@ -9,6 +9,7 @@ from pathlib import Path
 import math
 import json
 
+
 # just for tests
 # import matplotlib.pyplot as plt
 
@@ -24,11 +25,11 @@ def main():
     parser.add_argument('-f', '--number_input_frames', default=50, type=int)
     parser.add_argument('--dataset', default='stanford', choices=['stanford', 'mainz'])
     parser.add_argument('-m', '--model_name', default='vgg', choices=['vgg', 'resnet_18', 'resnet_34',
-                                                                 'resnet_50', 'se-resnet'])
+                                                                      'resnet_50', 'se-resnet'])
     args = parser.parse_args()
 
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
-          Path(args.input_directory), args.dataset, args.model)
+          Path(args.input_directory), args.dataset, args.model_name)
 
 
 def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_input_frames, input_directory, dataset,

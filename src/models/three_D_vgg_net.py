@@ -1,5 +1,5 @@
 from tensorflow import keras
-from custom_layers import CustomConv3D
+from models.custom_layers import CustomConv3D
 
 
 class ThreeDConvolutionVGGStanford(keras.Model):
