@@ -19,13 +19,13 @@ class ThreeDConvolutionResNet18(keras.Model):
             ResidualBlock(64, 3),
             ResidualBlock(64, 3),
 
-            ResidualConvBlock(3, 128),
+            ResidualConvBlock(3, 128, 2),
             ResidualBlock(3, 128),
 
-            ResidualConvBlock(3, 256),
+            ResidualConvBlock(3, 256, 2),
             ResidualBlock(3, 256),
 
-            ResidualConvBlock(3, 512),
+            ResidualConvBlock(3, 512, 2),
             ResidualBlock(3, 512),
 
             # fix resnet tail
@@ -57,19 +57,19 @@ class ThreeDConvolutionResNet34(keras.Model):
             ResidualBlock(64, 3),
             ResidualBlock(64, 3),
 
-            ResidualConvBlock(3, 128),
+            ResidualConvBlock(3, 128, 2),
             ResidualBlock(3, 128),
             ResidualBlock(3, 128),
             ResidualBlock(3, 128),
 
-            ResidualConvBlock(3, 256),
+            ResidualConvBlock(3, 256, 2),
             ResidualBlock(3, 256),
             ResidualBlock(3, 256),
             ResidualBlock(3, 256),
             ResidualBlock(3, 256),
             ResidualBlock(3, 256),
 
-            ResidualConvBlock(3, 512),
+            ResidualConvBlock(3, 512, 2),
             ResidualBlock(3, 512),
             ResidualBlock(3, 512),
 
@@ -98,23 +98,23 @@ class ThreeDConvolutionResNet50(keras.Model):
             keras.layers.MaxPool3D(3, 2),
 
             # variable 3 layer blocks
-            ResidualConvBottleneckBlock(3, 64),
+            ResidualConvBottleneckBlock(3, 64, 2),
             ResidualBottleneckBlock(3, 64),
             ResidualBottleneckBlock(3, 64),
 
-            ResidualConvBottleneckBlock(3, 128),
+            ResidualConvBottleneckBlock(3, 128, 2),
             ResidualBottleneckBlock(3, 128),
             ResidualBottleneckBlock(3, 128),
             ResidualBottleneckBlock(3, 128),
 
-            ResidualConvBottleneckBlock(3, 256),
+            ResidualConvBottleneckBlock(3, 256, 2),
             ResidualBottleneckBlock(3, 256),
             ResidualBottleneckBlock(3, 256),
             ResidualBottleneckBlock(3, 256),
             ResidualBottleneckBlock(3, 256),
             ResidualBottleneckBlock(3, 256),
 
-            ResidualConvBottleneckBlock(3, 512),
+            ResidualConvBottleneckBlock(3, 512, 2),
             ResidualBottleneckBlock(3, 512),
             ResidualBottleneckBlock(3, 512),
 
