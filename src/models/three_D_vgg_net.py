@@ -27,8 +27,8 @@ class ThreeDConvolutionVGGStanford(keras.Model):
                 keras.layers.Flatten(),
 
                 keras.layers.Dense(2048),
-                keras.layers.BatchNormalization(),
-                keras.layers.ReLU,
+                # keras.layers.BatchNormalization(),
+                keras.layers.ReLU(),
                 keras.layers.Dense(2048, activation='relu'),
                 keras.layers.Dense(1)
             ]
