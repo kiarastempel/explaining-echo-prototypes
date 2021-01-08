@@ -126,7 +126,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             # tf.summary.scalar('epoch_mae_overlapping', data=validation_mae_overlapping, step=epoch)
             # tf.summary.scalar('epoch_mae_distinct', data=validation_mae_distinct, step=epoch)
 
-        for metric in (train_mse_metric, validation_mse_metric, validation_mae_metric, validation_mae_metric_distinct,
+        for metric in (train_mse_metric, train_mae_metric, validation_mse_metric, validation_mae_metric, validation_mae_metric_distinct,
                        validation_mae_metric_overlapping):
             metric.reset_states()
 
