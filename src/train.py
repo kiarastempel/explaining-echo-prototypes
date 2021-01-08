@@ -4,7 +4,7 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
 print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from datetime import datetime
-from models import three_D_vgg_net
+from models.three_D_vgg_net import ThreeDConvolutionVGGStanford
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from data_loader import mainz_recordloader, stanford_recordloader
 from pathlib import Path
@@ -71,7 +71,7 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     elif model_name == 'resnet_50':
         model = ThreeDConvolutionResNet50(width, height, number_input_frames, channels, mean, std)
     else:
-        model = three_D_vgg_net.ThreeDConvolutionVGGStanford(width, height, number_input_frames, channels, mean, std)
+        model = ThreeDConvolutionVGGStanford(width, height, number_input_frames, channels, mean, std)
 
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
@@ -82,7 +82,8 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     early_stopping_counter = 0
     best_loss = math.inf
     train_mse_metric = keras.metrics.MeanSquaredError()
-    train_mse_metric = keras.metrics.MeanAbsoluteError()
+    train_mae_metric = keras.metrics.MeanAbsoluteError()
+    train_metrics = [train_mse_metric, train_mae_metric]
     validation_mse_metric = keras.metrics.MeanSquaredError()
     validation_mae_metric = keras.metrics.MeanAbsoluteError()
     validation_mae_metric_distinct = keras.metrics.MeanAbsoluteError()
@@ -99,10 +100,11 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
     for epoch in range(epochs):
         for x_batch_train, y_batch_train in train_dataset:
-            train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_mse_metric)
+            train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics)
 
         with file_writer_train.as_default():
             tf.summary.scalar('epoch_loss', data=train_mse_metric.result(), step=epoch)
+            tf.summary.scalar('epoch_mae', data=train_mae_metric.result(), step=epoch)
 
         for x_batch_val, y_batch_val in validation_dataset:
             first_frames = get_first_frames(x_batch_val, number_input_frames)
@@ -140,13 +142,14 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
 
 @tf.function
-def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_mse_metric):
+def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, metrics):
     with tf.GradientTape() as tape:
         predictions = model(x_batch_train, training=True)
         loss_value = loss_fn(y_batch_train, predictions)
     grads = tape.gradient(loss_value, model.trainable_weights)
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
-    train_mse_metric.update_state(y_batch_train, predictions)
+    for metric in metrics:
+        metric.update_state(y_batch_train, predictions)
     return loss_value
 
 
