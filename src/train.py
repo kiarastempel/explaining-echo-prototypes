@@ -4,7 +4,7 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
 print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from datetime import datetime
-from models import three_D_vgg_net, three_D_resnet
+from models import three_D_vgg_net
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from data_loader import mainz_recordloader, stanford_recordloader
 from pathlib import Path
@@ -64,9 +64,7 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     # plt.imshow(test[0][0][10], cmap='gray')
     # plt.show()
 
-    if model_name == 'vgg':
-        model = three_D_vgg_net.ThreeDConvolutionVGGStanford(width, height, number_input_frames, channels, mean, std)
-    elif model_name == 'resnet_18':
+    if model_name == 'resnet_18':
         model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std)
     elif model_name == 'resnet_34':
         model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std)
@@ -84,6 +82,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     early_stopping_counter = 0
     best_loss = math.inf
     train_mse_metric = keras.metrics.MeanSquaredError()
+    train_mse_metric = keras.metrics.MeanAbsoluteError()
     validation_mse_metric = keras.metrics.MeanSquaredError()
     validation_mae_metric = keras.metrics.MeanAbsoluteError()
     validation_mae_metric_distinct = keras.metrics.MeanAbsoluteError()
