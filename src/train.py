@@ -1,7 +1,8 @@
 import argparse
 from datetime import datetime
 from tensorflow import keras
-from models import three_D_vgg_net
+from models import three_D_vgg_net, three_D_resnet
+from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 import tensorflow as tf
 from data_loader import mainz_recordloader, stanford_recordloader
 from pathlib import Path
@@ -22,7 +23,8 @@ def main():
     parser.add_argument('-l', '--learning_rate', default=0.01, type=float)
     parser.add_argument('-f', '--number_input_frames', default=50, type=int)
     parser.add_argument('--dataset', default='stanford', choices=['stanford', 'mainz'])
-    parser.add_argument('-m', '--model', default='vgg', choices=['vgg', 'resnet', 'se-resnet'])
+    parser.add_argument('-m', '--model_name', default='vgg', choices=['vgg', 'resnet_18', 'resnet_34',
+                                                                 'resnet_50', 'se-resnet'])
     args = parser.parse_args()
 
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
@@ -30,7 +32,7 @@ def main():
 
 
 def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_input_frames, input_directory, dataset,
-          model):
+          model_name):
     tf.random.set_seed(5)
 
     train_record_file_name = input_directory / 'tf_record' / 'train' / 'train_*.tfrecord.gzip'
@@ -58,8 +60,17 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     # plt.imshow(test[0][0][10], cmap='gray')
     # plt.show()
 
-    model = three_D_vgg_net.ThreeDConvolutionVGGStanford(width, height, number_input_frames, channels, mean,
-                                                         std)
+    if model_name == 'vgg':
+        model = three_D_vgg_net.ThreeDConvolutionVGGStanford(width, height, number_input_frames, channels, mean, std)
+    elif model_name == 'resnet_18':
+        model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std)
+    elif model_name == 'resnet_34':
+        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std)
+    elif model_name == 'resnet_50':
+        model = ThreeDConvolutionResNet50(width, height, number_input_frames, channels, mean, std)
+    else:
+        model = three_D_vgg_net.ThreeDConvolutionVGGStanford(width, height, number_input_frames, channels, mean, std)
+
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
     train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames)
@@ -84,10 +95,6 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     file_writer_validation = tf.summary.create_file_writer(str(log_dir_validation))
 
     for epoch in range(epochs):
-        for metric in (train_mse_metric, validation_mse_metric, validation_mae_metric, validation_mae_metric_distinct,
-                       validation_mae_metric_overlapping):
-            metric.reset_states()
-
         for x_batch_train, y_batch_train in train_dataset.take(1):
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_mse_metric)
 
@@ -96,12 +103,12 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
         for x_batch_val, y_batch_val in validation_dataset.take(1):
             first_frames = get_first_frames(x_batch_val, number_input_frames)
-            distinct_splits = get_distinct_splits(x_batch_val, number_input_frames)
-            overlapping_splits = get_overlapping_splits(x_batch_val, number_input_frames)
+            # distinct_splits = get_distinct_splits(x_batch_val, number_input_frames)
+            # overlapping_splits = get_overlapping_splits(x_batch_val, number_input_frames)
             validation_step(model, first_frames, y_batch_val, validation_mse_metric)
             validation_step(model, first_frames, y_batch_val, validation_mae_metric)
-            validation_step(model, distinct_splits, y_batch_val, validation_mae_metric_distinct)
-            validation_step(model, overlapping_splits, y_batch_val, validation_mae_metric_overlapping)
+            # validation_step(model, distinct_splits, y_batch_val, validation_mae_metric_distinct)
+            # validation_step(model, overlapping_splits, y_batch_val, validation_mae_metric_overlapping)
 
         validation_mse = validation_mse_metric.result()
         validation_mae = validation_mae_metric.result()
@@ -111,8 +118,12 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
         with file_writer_validation.as_default():
             tf.summary.scalar('epoch_loss', data=validation_mse, step=epoch)
             tf.summary.scalar('epoch_mae', data=validation_mae, step=epoch)
-            tf.summary.scalar('epoch_mae_overlapping', data=validation_mae_overlapping, step=epoch)
-            tf.summary.scalar('epoch_mae_distinct', data=validation_mae_distinct, step=epoch)
+            # tf.summary.scalar('epoch_mae_overlapping', data=validation_mae_overlapping, step=epoch)
+            # tf.summary.scalar('epoch_mae_distinct', data=validation_mae_distinct, step=epoch)
+
+        for metric in (train_mse_metric, validation_mse_metric, validation_mae_metric, validation_mae_metric_distinct,
+                       validation_mae_metric_overlapping):
+            metric.reset_states()
 
         # early stopping and save best model
         if validation_mse < best_loss:
