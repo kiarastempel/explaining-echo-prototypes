@@ -10,6 +10,7 @@ from models.three_D_squeeze_and_excitation_resnet import  ThreeDConvolutionSquee
 from data_loader import mainz_recordloader, stanford_recordloader
 from pathlib import Path
 import math
+import utils.input_arguments
 import json
 import tensorflow as tf
 from tensorflow import keras
@@ -19,19 +20,7 @@ from tensorflow import keras
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input_directory', default='../data', help="Directory with the TFRecord files.")
-    parser.add_argument('-b', '--batch_size', default=16, type=int)
-    parser.add_argument('-s', '--shuffle_size', default=1024, type=int)
-    parser.add_argument('-e', '--epochs', default=200, type=int)
-    parser.add_argument('-p', '--patience', default=10, type=int)
-    parser.add_argument('-l', '--learning_rate', default=0.01, type=float)
-    parser.add_argument('-f', '--number_input_frames', default=50, type=int)
-    parser.add_argument('--dataset', default='stanford', choices=['stanford', 'mainz'])
-    parser.add_argument('-m', '--model_name', default='vgg', choices=['vgg', 'resnet_18', 'resnet_34',
-                                                                      'resnet_50', 'se-resnet_18'])
-    args = parser.parse_args()
-
+    args = utils.input_arguments.get_arguments()
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
           Path(args.input_directory), args.dataset, args.model_name)
 
