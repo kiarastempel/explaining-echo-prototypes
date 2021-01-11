@@ -34,14 +34,14 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
 
     # load videos and file_list and put into tfrecord
     input_path = Path(input_directory)
-    file_list_data_frame = pd.read_csv(input_path / metadata_filename, sep=";", decimal=",")
+    file_list_data_frame = pd.read_csv(input_path / metadata_filename, sep=",", decimal=".")
 
     p = (input_path / 'Videos').glob('*')
     video_paths = [x.name for x in p if x.is_file()]
     file_information = pd.DataFrame([(x, x.split('_')[0], x.split('_')[1]) for x in video_paths],
-                                    columns=["FileName", "id", "view"])
+                                    columns=["uid", "view"])
     file_information["id"] = file_information["id"].astype(int)
-    video_metadata = file_information.merge(file_list_data_frame, on="id", how="right")
+    video_metadata = file_information.merge(file_list_data_frame, on="uid", how="right")
     video_metadata.dropna(inplace=True)
     a4c_video_metadata = video_metadata[video_metadata["view"] == "a4c"]
     a2c_video_metadata = video_metadata[video_metadata["view"] == "a2c"]

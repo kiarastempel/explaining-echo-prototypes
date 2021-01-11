@@ -1,8 +1,9 @@
-numpy
-pydicom
+numpy~=1.19.2
+pydicom~=2.0.0
 opencv-python
-pillow
-pandas
+pillow~=8.0.1
+pandas~=1.1.3
 tensorflow-addons
-tensorflow
-tqdm
+tensorflow~=2.2.0
+tqdm~=4.50.2
+pyodbc~=4.0.30
