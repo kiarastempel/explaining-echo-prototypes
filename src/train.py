@@ -6,6 +6,7 @@ print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from datetime import datetime
 from models.three_D_vgg_net import ThreeDConvolutionVGGStanford
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
+from models.three_D_squeeze_and_excitation_resnet import  ThreeDConvolutionSqueezeAndExciationResNet18
 from data_loader import mainz_recordloader, stanford_recordloader
 from pathlib import Path
 import math
@@ -28,7 +29,7 @@ def main():
     parser.add_argument('-f', '--number_input_frames', default=50, type=int)
     parser.add_argument('--dataset', default='stanford', choices=['stanford', 'mainz'])
     parser.add_argument('-m', '--model_name', default='vgg', choices=['vgg', 'resnet_18', 'resnet_34',
-                                                                      'resnet_50', 'se-resnet'])
+                                                                      'resnet_50', 'se-resnet_18'])
     args = parser.parse_args()
 
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
@@ -70,6 +71,8 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std)
     elif model_name == 'resnet_50':
         model = ThreeDConvolutionResNet50(width, height, number_input_frames, channels, mean, std)
+    elif model_name == 'sq-resnet_18':
+        model = ThreeDConvolutionSqueezeAndExciationResNet18(width, height, number_input_frames, channels, mean, std)
     else:
         model = ThreeDConvolutionVGGStanford(width, height, number_input_frames, channels, mean, std)
 
