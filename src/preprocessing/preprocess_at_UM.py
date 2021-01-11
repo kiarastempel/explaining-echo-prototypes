@@ -11,6 +11,7 @@ import pyodbc
 import shutil
 import sqlserverport
 
+
 #sudo docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=ThatIsAPassword1234" -p 1433:1433 --name sql1 -h sql1 -d mcr.microsoft.com/mssql/server:2019-latest
 
 class CHandleDatabase:
@@ -23,22 +24,22 @@ class CHandleDatabase:
     # open database connection
     def connect_db(self):
         server = '10.8.4.205'
-        database = 'DICOMConverter'
-       # port =  str(sqlserverport.lookup(server, 'DEV'))
+        database = 'DeepLearning'
+        #port =  str(sqlserverport.lookup(server, ''))
         port = "1433"
 
         #self.cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database + ';User=yes', timeout=180)
-        self.cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';PORT='+port+';DATABASE=' + database + ';UID=sa;PWD=ThatIsAPassword1234', timeout=30)
+        self.cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';PORT='+port+';DATABASE=' + database + ';UID=sa;PWD=Db630475$', timeout=30)
         cursor = self.cnxn.cursor()
         print("SQL DB conncted")
         return cursor
 
     def get_campusID(self, subdirname):
-        self._cursor.execute('SELECT myoid FROM dbo.TableLoadStatus WHERE path like \'%' + subdirname + '%\'')
+        self._cursor.execute('SELECT myoid FROM dbo.TableEchoMeasureStatus WHERE REPLACE(studyuid, \'.\',\'\') like \'%' + subdirname + '%\' and status=2')
         row = self._cursor.fetchone()
         if(row!=None):
             myoid = row.myoid.strip()
-            self._cursor.execute('SELECT id FROM dbo.UUIDtoMYOID WHERE myoid=\''+myoid+'\'')
+            self._cursor.execute('SELECT id FROM dbo.UUIDtoMYOID WHERE myoid=\''+myoid+'\' and done_converting=0')
             uidrow = self._cursor.fetchone()
             if(uidrow!=None):
                 return str(uidrow.id)
@@ -49,7 +50,7 @@ class CHandleDatabase:
 
 
     def get_campusID(self, subdirname):
-        self._cursor.execute('SELECT myoid FROM dbo.TableLoadStatus WHERE path like \'%' + subdirname + '%\'')
+        self._cursor.execute('SELECT myoid FROM dbo.TableEchoMeasureStatus where REPLACE(studyuid, \'.\',\'\') like \'%' + subdirname + '%\' and status=2')
         row = self._cursor.fetchone()
         if(row!=None):
             myoid = row.myoid.strip()
@@ -91,8 +92,8 @@ def main():
     #data_path = Path('D:\Jul2020')
 
 
-    result_path = Path('/home/tro2s/echoconverter/processed')
-    data_path = Path('/home/tro2s/xcelera_workerservice/dicoms/Aug/2020')
+    result_path = Path('/home/tro2s/echoconverter/processedBL')
+    data_path = Path('/mnt/windows_share/dicom_storage')
 
     p = data_path.glob('**/*')
 
@@ -153,7 +154,11 @@ def make_video(file_to_process, destination_folder, campusid, view):
     if not (Path(video_filename).is_file() and Path(dicom_filename).is_file()):
         dicom_file = dicom.dcmread(file_to_process)
         pixel_array = dicom_file.pixel_array
-        frames, height, width, channels = pixel_array.shape
+ 
+        if(len(pixel_array.shape)==4):
+            frames, height, width, channels = pixel_array.shape
+        else:
+            frames, height, width = pixel_array.shape
 
         video = []
         left_crop = int(width * 0.23)
@@ -167,8 +172,11 @@ def make_video(file_to_process, destination_folder, campusid, view):
         fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
         out = cv2.VideoWriter(str(video_filename), fourcc, fps, crop_size_video, isColor=False)
         for i in range(frames):
-            # The first channel of a YCbCr image is the grey value
-            output_a = pixel_array[i, :, :, 0]
+            if(len(pixel_array.shape)==4):
+                # The first channel of a YCbCr image is the grey value
+                output_a = pixel_array[i, :, :, 0]
+            else:
+                output_a = pixel_array[i, :, :]
 
             # Cropping the image
             small_output = output_a[upper_crop:(height - lower_crop), left_crop:width - right_crop]
