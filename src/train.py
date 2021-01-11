@@ -108,12 +108,12 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
         for x_batch_val, y_batch_val in validation_dataset:
             first_frames = get_first_frames(x_batch_val, number_input_frames)
-            # distinct_splits = get_distinct_splits(x_batch_val, number_input_frames)
-            # overlapping_splits = get_overlapping_splits(x_batch_val, number_input_frames)
+            distinct_splits = get_distinct_splits(x_batch_val, number_input_frames)
+            overlapping_splits = get_overlapping_splits(x_batch_val, number_input_frames)
             validation_step(model, first_frames, y_batch_val, validation_mse_metric)
             validation_step(model, first_frames, y_batch_val, validation_mae_metric)
-            # validation_step(model, distinct_splits, y_batch_val, validation_mae_metric_distinct)
-            # validation_step(model, overlapping_splits, y_batch_val, validation_mae_metric_overlapping)
+            validation_step(model, distinct_splits, y_batch_val, validation_mae_metric_distinct)
+            validation_step(model, overlapping_splits, y_batch_val, validation_mae_metric_overlapping)
 
         validation_mse = validation_mse_metric.result()
         validation_mae = validation_mae_metric.result()
@@ -123,8 +123,8 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
         with file_writer_validation.as_default():
             tf.summary.scalar('epoch_loss', data=validation_mse, step=epoch)
             tf.summary.scalar('epoch_mae', data=validation_mae, step=epoch)
-            # tf.summary.scalar('epoch_mae_overlapping', data=validation_mae_overlapping, step=epoch)
-            # tf.summary.scalar('epoch_mae_distinct', data=validation_mae_distinct, step=epoch)
+            tf.summary.scalar('epoch_mae_overlapping', data=validation_mae_overlapping, step=epoch)
+            tf.summary.scalar('epoch_mae_distinct', data=validation_mae_distinct, step=epoch)
 
         for metric in (train_mse_metric, train_mae_metric, validation_mse_metric, validation_mae_metric,
                        validation_mae_metric_distinct, validation_mae_metric_overlapping):
