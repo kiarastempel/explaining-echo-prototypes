@@ -31,7 +31,8 @@ class ResidualBlock(keras.layers.Layer):
     def call(self, inputs, training=None):
         intermediate_output = self.resnet_block(inputs)
         output_sum = tf.add(intermediate_output, inputs)
-        return self.relu(output_sum)
+        output = self.relu(output_sum)
+        return output
 
 
 class ResidualBottleneckBlock(keras.layers.Layer):
@@ -50,7 +51,8 @@ class ResidualBottleneckBlock(keras.layers.Layer):
     def call(self, inputs, **kwargs):
         intermediate_output = self.resnet_bottleneck_block(inputs)
         output_sum = tf.add(intermediate_output, inputs)
-        return self.relu(output_sum)
+        output = self.relu(output_sum)
+        return output
 
 
 class ResidualConvBlock(keras.layers.Layer):
@@ -75,7 +77,8 @@ class ResidualConvBlock(keras.layers.Layer):
         intermediate_output = self.resnet_conv_block(inputs)
         shortcut = self.shortcut_conv(inputs)
         output_sum = tf.add(intermediate_output, shortcut)
-        return self.relu(output_sum)
+        output = self.relu(output_sum)
+        return output
 
 
 class ResidualConvBottleneckBlock(keras.layers.Layer):
@@ -100,7 +103,8 @@ class ResidualConvBottleneckBlock(keras.layers.Layer):
         intermediate_output = self.resnet_conv_bottleneck_block(inputs)
         shortcut = self.shortcut_conv(inputs)
         output_sum = tf.add(intermediate_output, shortcut)
-        return self.relu(output_sum)
+        output = self.relu(output_sum)
+        return output
 
 
 class SqueezeAndExcitationPath(keras.layers.Layer):
