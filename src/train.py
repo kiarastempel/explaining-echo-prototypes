@@ -1,14 +1,17 @@
 import argparse
+from utils import choose_gpu
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
+print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from datetime import datetime
-from tensorflow import keras
-from models import three_D_convolution_net
-import tensorflow_addons as tfa
-import tensorflow as tf
+from models.three_D_vgg_net import ThreeDConvolutionVGGStanford
+from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from data_loader import mainz_recordloader, stanford_recordloader
 from pathlib import Path
 import math
 import json
-
+import tensorflow as tf
+from tensorflow import keras
 
 # just for tests
 # import matplotlib.pyplot as plt
@@ -18,19 +21,22 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory', default='../data', help="Directory with the TFRecord files.")
     parser.add_argument('-b', '--batch_size', default=16, type=int)
-    parser.add_argument('-s', '--shuffle_size', default=1000, type=int)
+    parser.add_argument('-s', '--shuffle_size', default=1024, type=int)
     parser.add_argument('-e', '--epochs', default=200, type=int)
     parser.add_argument('-p', '--patience', default=10, type=int)
     parser.add_argument('-l', '--learning_rate', default=0.01, type=float)
     parser.add_argument('-f', '--number_input_frames', default=50, type=int)
     parser.add_argument('--dataset', default='stanford', choices=['stanford', 'mainz'])
+    parser.add_argument('-m', '--model_name', default='vgg', choices=['vgg', 'resnet_18', 'resnet_34',
+                                                                      'resnet_50', 'se-resnet'])
     args = parser.parse_args()
 
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
-          Path(args.input_directory))
+          Path(args.input_directory), args.dataset, args.model_name)
 
 
-def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_input_frames, input_directory):
+def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_input_frames, input_directory, dataset,
+          model_name):
     tf.random.set_seed(5)
 
     train_record_file_name = input_directory / 'tf_record' / 'train' / 'train_*.tfrecord.gzip'
@@ -58,11 +64,17 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     # plt.imshow(test[0][0][10], cmap='gray')
     # plt.show()
 
-    model = three_D_convolution_net.ThreeDConvolutionVGGStanford(width, height, number_input_frames, channels, mean,
-                                                                 std)
+    if model_name == 'resnet_18':
+        model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std)
+    elif model_name == 'resnet_34':
+        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std)
+    elif model_name == 'resnet_50':
+        model = ThreeDConvolutionResNet50(width, height, number_input_frames, channels, mean, std)
+    else:
+        model = ThreeDConvolutionVGGStanford(width, height, number_input_frames, channels, mean, std)
+
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
-    # opt = tfa.optimizers.SWA(opt, start_averaging=m, average_period=k)
     train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames)
 
 
@@ -70,6 +82,8 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     early_stopping_counter = 0
     best_loss = math.inf
     train_mse_metric = keras.metrics.MeanSquaredError()
+    train_mae_metric = keras.metrics.MeanAbsoluteError()
+    train_metrics = [train_mse_metric, train_mae_metric]
     validation_mse_metric = keras.metrics.MeanSquaredError()
     validation_mae_metric = keras.metrics.MeanAbsoluteError()
     validation_mae_metric_distinct = keras.metrics.MeanAbsoluteError()
@@ -85,11 +99,12 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     file_writer_validation = tf.summary.create_file_writer(str(log_dir_validation))
 
     for epoch in range(epochs):
-        for x_batch_train, y_batch_train, batch_number in train_dataset:
-            train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_mse_metric)
+        for x_batch_train, y_batch_train in train_dataset:
+            train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics)
 
         with file_writer_train.as_default():
             tf.summary.scalar('epoch_loss', data=train_mse_metric.result(), step=epoch)
+            tf.summary.scalar('epoch_mae', data=train_mae_metric.result(), step=epoch)
 
         for x_batch_val, y_batch_val in validation_dataset:
             first_frames = get_first_frames(x_batch_val, number_input_frames)
@@ -111,31 +126,30 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             # tf.summary.scalar('epoch_mae_overlapping', data=validation_mae_overlapping, step=epoch)
             # tf.summary.scalar('epoch_mae_distinct', data=validation_mae_distinct, step=epoch)
 
+        for metric in (train_mse_metric, train_mae_metric, validation_mse_metric, validation_mae_metric,
+                       validation_mae_metric_distinct, validation_mae_metric_overlapping):
+            metric.reset_states()
+
         # early stopping and save best model
         if validation_mse < best_loss:
             early_stopping_counter = 0
             best_loss = validation_mse
-            model.save(str(save_path), save_format="tf")
+            # model.save(str(save_path), save_format="tf")
         else:
             early_stopping_counter += 1
             if early_stopping_counter > patience:
                 break
 
-        for metric in (train_mse_metric, validation_mse_metric, validation_mae_metric, validation_mae_metric_distinct,
-                       validation_mae_metric_overlapping):
-            metric.reset_states()
-
-    # TODO implement swa
-
 
 @tf.function
-def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_mse_metric):
+def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, metrics):
     with tf.GradientTape() as tape:
         predictions = model(x_batch_train, training=True)
         loss_value = loss_fn(y_batch_train, predictions)
     grads = tape.gradient(loss_value, model.trainable_weights)
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
-    train_mse_metric.update_state(y_batch_train, predictions)
+    for metric in metrics:
+        metric.update_state(y_batch_train, predictions)
     return loss_value
 
 
