@@ -117,9 +117,12 @@ class SqueezeAndExcitationPath(keras.layers.Layer):
                 keras.layers.Dense(channel, activation='sigmoid'),
             ]
         )
+        self.channel = channel
 
     def call(self, inputs, **kwargs):
-        return self.se_path(inputs)
+        weights = self.se_path(inputs)
+        reshaped_weights = tf.reshape(weights, (-1, 1, 1, 1, self.channel))
+        return reshaped_weights
 
 
 class SqueezeAndExcitationResidualBlock(keras.layers.Layer):
