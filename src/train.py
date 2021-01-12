@@ -4,9 +4,9 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
 print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from datetime import datetime
-from models.three_D_vgg_net import ThreeDConvolutionVGGStanford
+from models.three_D_vgg_net import ThreeDConvolutionVGG
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
-from models.three_D_squeeze_and_excitation_resnet import  ThreeDConvolutionSqueezeAndExciationResNet18
+from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet18
 from data_loader import mainz_recordloader, stanford_recordloader
 from pathlib import Path
 import math
@@ -63,7 +63,7 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     elif model_name == 'se-resnet_18':
         model = ThreeDConvolutionSqueezeAndExciationResNet18(width, height, number_input_frames, channels, mean, std)
     else:
-        model = ThreeDConvolutionVGGStanford(width, height, number_input_frames, channels, mean, std)
+        model = ThreeDConvolutionVGG(width, height, number_input_frames, channels, mean, std)
 
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
