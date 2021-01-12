@@ -46,7 +46,7 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         channels = metadata['channels']
 
     train_dataset = stanford_recordloader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
-                                                        number_input_frames)
+                                                        number_input_frames, augment=False)
     validation_dataset = stanford_recordloader.build_dataset_validation(str(validation_record_file_name))
 
     # just for tests purposes

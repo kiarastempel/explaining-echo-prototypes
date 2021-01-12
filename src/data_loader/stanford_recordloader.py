@@ -53,12 +53,13 @@ def parse_and_augment_example(example, number_of_input_frames):
     parsed_example = tf.io.parse_example(example, feature_description)
     number_of_frames = parsed_example['number_of_frames']
     raw_frames = tf.sparse.to_dense(parsed_example['frames'])
-    subvideos = (number_of_frames / (number_of_input_frames / 2)) - 1
+    subvideos = tf.cast(number_of_frames / int(number_of_input_frames / 2) - 1, tf.int64)
     start = tf.cond(number_of_input_frames == number_of_frames,
                     lambda: tf.constant(0, dtype=tf.int64),
                     lambda: tf.random.uniform(shape=[], maxval=subvideos,
                                               dtype=tf.int64))
-    raw_subframes = raw_frames[start: start + (subvideos * number_of_input_frames)]
+    start = start * int(number_of_input_frames / 2)
+    raw_subframes = raw_frames[start: start + number_of_input_frames]
     subframes = tf.map_fn(tf.io.decode_jpeg, raw_subframes, fn_output_signature=tf.uint8)
     subframes = tf.cast(subframes, tf.float32)
     return subframes, parsed_example['ejection_fraction']
