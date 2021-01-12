@@ -34,14 +34,14 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
 
     # load videos and file_list and put into tfrecord
     input_path = Path(input_directory)
-    file_list_data_frame = pd.read_csv(input_path / metadata_filename, sep=";", decimal=",")
+    file_list_data_frame = pd.read_csv(input_path / metadata_filename, sep=",", decimal=".")
 
     p = (input_path / 'Videos').glob('*')
     video_paths = [x.name for x in p if x.is_file()]
     file_information = pd.DataFrame([(x, x.split('_')[0], x.split('_')[1]) for x in video_paths],
-                                    columns=["FileName", "id", "view"])
-    file_information["id"] = file_information["id"].astype(int)
-    video_metadata = file_information.merge(file_list_data_frame, on="id", how="right")
+                                    columns=["FileName", "uid", "view"])
+    file_information["uid"] = file_information["uid"].astype(int)
+    video_metadata = file_information.merge(file_list_data_frame, on="uid", how="right")
     video_metadata.dropna(inplace=True)
     a4c_video_metadata = video_metadata[video_metadata["view"] == "a4c"]
     a2c_video_metadata = video_metadata[video_metadata["view"] == "a2c"]
@@ -54,27 +54,27 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
     validation_ratio = 0.15
 
     output_path = Path(output_directory)
-    for view_metadata, view in zip((a4c_video_metadata, a2c_video_metadata, psax_video_metadata, video_metadata),
-                                   ('a4c', 'a2c', 'psax', 'all')):
+    for view_metadata, view in zip((a4c_video_metadata, ),
+                                   ('a4c',)):
         train_folder = output_path / 'tf_records' / view / 'train'
         test_folder = output_path / 'tf_records' / view / 'test'
         validation_folder = output_path / 'tf_records' / view / 'validation'
 
-        unique_ids = view_metadata['id'].unique()
+        unique_ids = view_metadata['uid'].unique()
         np.random.shuffle(unique_ids)
 
         train_ids, validation_ids, test_ids = np.split(unique_ids,
                                                        [int(train_ratio * len(unique_ids)),
                                                         int((train_ratio + validation_ratio) * len(
                                                             unique_ids))])
-        train_samples = view_metadata[view_metadata['id'].isin(train_ids)]
-        validation_samples = view_metadata[view_metadata['id'].isin(test_ids)]
-        test_samples = view_metadata[view_metadata['id'].isin(validation_ids)]
+        train_samples = view_metadata[view_metadata['uid'].isin(train_ids)]
+        validation_samples = view_metadata[view_metadata['uid'].isin(test_ids)]
+        test_samples = view_metadata[view_metadata['uid'].isin(validation_ids)]
         test_folder.mkdir(parents=True, exist_ok=True)
         train_folder.mkdir(exist_ok=True)
         validation_folder.mkdir(exist_ok=True)
-
-        width, height = echo_base.extract_metadata(train_samples.FileName[1], input_path)
+        print(train_samples['FileName'][0])
+        width, height = echo_base.extract_metadata(train_samples['FileName'][0], input_path)
 
         print(f'Create train record for {view} echocardiograms.')
         number_of_train_samples = create_tf_record(input_path, train_folder / 'train_{}.tfrecord', train_samples,
@@ -113,7 +113,7 @@ def create_tf_record(input_directory, output_file, samples, needed_frames=50):
             for file_name, ejection_fraction, e_e_prime, quality in zip(samples.FileName[start: end],
                                                                         samples.EF[start: end],
                                                                         samples.E_E_prime_Ratio[start:end],
-                                                                        samples.Quality[start:end]):
+                                                                        samples.grade[start:end]):
                 video = echo_base.load_video(input_directory / 'Videos' / file_name, needed_frames)
                 if video is not None:
                     number_used_videos += 1
