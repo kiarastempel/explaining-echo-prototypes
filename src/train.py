@@ -8,6 +8,7 @@ from models.three_D_vgg_net import ThreeDConvolutionVGG
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet18
 from data_loader import mainz_recordloader, stanford_recordloader
+from visualisation import visualise
 from pathlib import Path
 import math
 import utils.input_arguments
@@ -20,13 +21,13 @@ from tensorflow import keras
 
 
 def main():
-    args = utils.input_arguments.get_arguments()
+    args = utils.input_arguments.get_train_arguments()
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
-          Path(args.input_directory), args.dataset, args.model_name)
+          Path(args.input_directory), args.dataset, args.model_name, args.experiment_name)
 
 
 def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_input_frames, input_directory, dataset,
-          model_name):
+          model_name, experiment_name):
     tf.random.set_seed(5)
 
     train_record_file_name = input_directory / 'tf_record' / 'train' / 'train_*.tfrecord.gzip'
@@ -67,10 +68,12 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
 
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
-    train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames)
+    train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
+               experiment_name, model_name)
 
 
-def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames):
+def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
+               experiment_name, model_name):
     early_stopping_counter = 0
     best_loss = math.inf
     train_mse_metric = keras.metrics.MeanSquaredError()
@@ -83,7 +86,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
     Path("../logs").mkdir(exist_ok=True)
     Path("../saved").mkdir(exist_ok=True)
-    log_dir = Path("../logs", datetime.now().strftime("%Y%m%d-%H%M%S"))
+    log_dir = Path("../logs", experiment_name.join('_', model_name, '_', datetime.now().strftime("%Y%m%d-%H%M%S")))
     log_dir_train = log_dir / 'train'
     log_dir_validation = log_dir / 'validation'
     save_path = Path('../saved', datetime.now().strftime("%Y%m%d-%H%M%S"), 'three_d_conv_best_model')
@@ -91,6 +94,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     file_writer_validation = tf.summary.create_file_writer(str(log_dir_validation))
 
     for epoch in range(epochs):
+        # training
         for x_batch_train, y_batch_train in train_dataset:
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics)
 
@@ -98,6 +102,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             tf.summary.scalar('epoch_loss', data=train_mse_metric.result(), step=epoch)
             tf.summary.scalar('epoch_mae', data=train_mae_metric.result(), step=epoch)
 
+        # validation
         for x_batch_val, y_batch_val in validation_dataset:
             first_frames = get_first_frames(x_batch_val, number_input_frames)
             distinct_splits = get_distinct_splits(x_batch_val, number_input_frames)
@@ -126,11 +131,21 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
         if validation_mse < best_loss:
             early_stopping_counter = 0
             best_loss = validation_mse
-            # model.save(str(save_path), save_format="tf")
+            model.save(str(save_path), save_format="tf")
         else:
             early_stopping_counter += 1
             if early_stopping_counter > patience:
                 break
+
+    # visualization
+    predictions = []
+    true_values = []
+    for x_batch_val, y_batch_val in validation_dataset:
+        first_frames = get_first_frames(x_batch_val, number_input_frames)
+        prediction = validation_step(model, first_frames, y_batch_val, validation_mse_metric)
+        predictions.append(prediction[0])
+        true_values.append(y_batch_val[0])
+    visualise.create_scatter_plot(true_values, prediction)
 
 
 @tf.function
@@ -150,6 +165,7 @@ def validation_step(model, x_validation, y_validation, validation_metric):
     predictions = model(x_validation, training=False)
     mean_prediction = tf.reduce_mean(predictions, keepdims=True)
     validation_metric.update_state(y_validation, mean_prediction)
+    return mean_prediction
 
 
 def get_distinct_splits(video, number_of_frames):
