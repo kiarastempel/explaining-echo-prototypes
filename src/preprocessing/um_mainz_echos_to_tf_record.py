@@ -41,7 +41,7 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
     file_information = pd.DataFrame([(x, x.split('_')[0], x.split('_')[1]) for x in video_paths],
                                     columns=["FileName", "uid", "view"])
     file_information["uid"] = file_information["uid"].astype(int)
-    video_metadata = file_information.merge(file_list_data_frame, on="uid", how="right")
+    video_metadata = file_information.merge(file_list_data_frame, on="uid", how="inner")
     video_metadata.dropna(inplace=True)
     a4c_video_metadata = video_metadata[video_metadata["view"] == "a4c"]
     a2c_video_metadata = video_metadata[video_metadata["view"] == "a2c"]
@@ -73,8 +73,7 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
         test_folder.mkdir(parents=True, exist_ok=True)
         train_folder.mkdir(exist_ok=True)
         validation_folder.mkdir(exist_ok=True)
-        print(train_samples['FileName'][0])
-        width, height = echo_base.extract_metadata(train_samples['FileName'][0], input_path)
+        width, height = echo_base.extract_metadata(train_samples['FileName'].iloc[0], input_path)
 
         print(f'Create train record for {view} echocardiograms.')
         number_of_train_samples = create_tf_record(input_path, train_folder / 'train_{}.tfrecord', train_samples,
