@@ -140,12 +140,15 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     # visualization
     predictions = []
     true_values = []
+
     for x_batch_val, y_batch_val in validation_dataset:
         first_frames = get_first_frames(x_batch_val, number_input_frames)
         prediction = validation_step(model, first_frames, y_batch_val, validation_mse_metric)
         predictions.append(prediction[0])
         true_values.append(y_batch_val[0])
-    visualise.create_scatter_plot(true_values, prediction)
+    scatter_plot = visualise.create_scatter_plot(true_values, predictions)
+    with file_writer_validation.as_default():
+        tf.summary.image('Regression Plot', scatter_plot)
 
 
 @tf.function
