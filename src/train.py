@@ -156,6 +156,7 @@ def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, metrics)
     with tf.GradientTape() as tape:
         predictions = model(x_batch_train, training=True)
         loss_value = loss_fn(y_batch_train, predictions)
+        loss_value += sum(model.losses)
     grads = tape.gradient(loss_value, model.trainable_weights)
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
     for metric in metrics:
