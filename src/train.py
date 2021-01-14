@@ -147,7 +147,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     # visualization
     predictions = []
     true_values = []
-
+    model.load_weights(save_path)
     for x_batch_val, y_batch_val in validation_dataset:
         first_frames = get_first_frames(x_batch_val, number_input_frames)
         prediction = validation_step(model, first_frames, y_batch_val, validation_mse_metric)
