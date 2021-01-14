@@ -1,8 +1,7 @@
-import argparse
 from utils import choose_gpu
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
-print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
+#os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
+#print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from datetime import datetime
 from models.three_D_vgg_net import ThreeDConvolutionVGG
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
@@ -23,11 +22,11 @@ from tensorflow import keras
 def main():
     args = utils.input_arguments.get_train_arguments()
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
-          Path(args.input_directory), args.dataset, args.model_name, args.experiment_name)
+          Path(args.input_directory), args.dataset, args.model_name, args.experiment_name, args.augment)
 
 
 def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_input_frames, input_directory, dataset,
-          model_name, experiment_name):
+          model_name, experiment_name, augment):
     tf.random.set_seed(5)
 
     train_record_file_name = input_directory / 'tf_record' / 'train' / 'train_*.tfrecord.gzip'
@@ -47,7 +46,7 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         channels = metadata['channels']
 
     train_dataset = stanford_recordloader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
-                                                        number_input_frames, augment=False)
+                                                        number_input_frames, augment=augment)
     validation_dataset = stanford_recordloader.build_dataset_validation(str(validation_record_file_name))
 
     # just for tests purposes
@@ -86,16 +85,16 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
     Path("../logs").mkdir(exist_ok=True)
     Path("../saved").mkdir(exist_ok=True)
-    log_dir = Path("../logs", experiment_name.join('_', model_name, '_', datetime.now().strftime("%Y%m%d-%H%M%S")))
+    log_dir = Path("../logs", '_'.join([experiment_name, model_name, datetime.now().strftime("%Y%m%d-%H%M%S")]))
     log_dir_train = log_dir / 'train'
     log_dir_validation = log_dir / 'validation'
-    save_path = Path('../saved', datetime.now().strftime("%Y%m%d-%H%M%S"), 'three_d_conv_best_model')
+    save_path = Path('../saved', '_'.join([experiment_name, model_name, datetime.now().strftime("%Y%m%d-%H%M%S")]))
     file_writer_train = tf.summary.create_file_writer(str(log_dir_train))
     file_writer_validation = tf.summary.create_file_writer(str(log_dir_validation))
 
     for epoch in range(epochs):
         # training
-        for x_batch_train, y_batch_train in train_dataset:
+        for x_batch_train, y_batch_train in train_dataset.take(2):
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics)
 
         with file_writer_train.as_default():
@@ -103,25 +102,25 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             tf.summary.scalar('epoch_mae', data=train_mae_metric.result(), step=epoch)
 
         # validation
-        for x_batch_val, y_batch_val in validation_dataset:
+        for x_batch_val, y_batch_val in validation_dataset.take(2):
             first_frames = get_first_frames(x_batch_val, number_input_frames)
-            distinct_splits = get_distinct_splits(x_batch_val, number_input_frames)
-            overlapping_splits = get_overlapping_splits(x_batch_val, number_input_frames)
+            # distinct_splits = get_distinct_splits(x_batch_val, number_input_frames)
+            # overlapping_splits = get_overlapping_splits(x_batch_val, number_input_frames)
             validation_step(model, first_frames, y_batch_val, validation_mse_metric)
             validation_step(model, first_frames, y_batch_val, validation_mae_metric)
-            validation_step(model, distinct_splits, y_batch_val, validation_mae_metric_distinct)
-            validation_step(model, overlapping_splits, y_batch_val, validation_mae_metric_overlapping)
+            # validation_step(model, distinct_splits, y_batch_val, validation_mae_metric_distinct)
+            # validation_step(model, overlapping_splits, y_batch_val, validation_mae_metric_overlapping)
 
         validation_mse = validation_mse_metric.result()
         validation_mae = validation_mae_metric.result()
-        validation_mae_overlapping = validation_mae_metric_overlapping.result()
-        validation_mae_distinct = validation_mae_metric_distinct.result()
+        # validation_mae_overlapping = validation_mae_metric_overlapping.result()
+        # validation_mae_distinct = validation_mae_metric_distinct.result()
 
         with file_writer_validation.as_default():
             tf.summary.scalar('epoch_loss', data=validation_mse, step=epoch)
             tf.summary.scalar('epoch_mae', data=validation_mae, step=epoch)
-            tf.summary.scalar('epoch_mae_overlapping', data=validation_mae_overlapping, step=epoch)
-            tf.summary.scalar('epoch_mae_distinct', data=validation_mae_distinct, step=epoch)
+            # tf.summary.scalar('epoch_mae_overlapping', data=validation_mae_overlapping, step=epoch)
+            # tf.summary.scalar('epoch_mae_distinct', data=validation_mae_distinct, step=epoch)
 
         for metric in (train_mse_metric, train_mae_metric, validation_mse_metric, validation_mae_metric,
                        validation_mae_metric_distinct, validation_mae_metric_overlapping):
@@ -141,7 +140,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     predictions = []
     true_values = []
 
-    for x_batch_val, y_batch_val in validation_dataset:
+    for x_batch_val, y_batch_val in validation_dataset.take(10):
         first_frames = get_first_frames(x_batch_val, number_input_frames)
         prediction = validation_step(model, first_frames, y_batch_val, validation_mse_metric)
         predictions.append(prediction[0])

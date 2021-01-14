@@ -41,7 +41,7 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
     file_information = pd.DataFrame([(x, x.split('_')[0], x.split('_')[1]) for x in video_paths],
                                     columns=["FileName", "uid", "view"])
     file_information["uid"] = file_information["uid"].astype(int)
-    video_metadata = file_information.merge(file_list_data_frame, on="uid", how="inner")
+    video_metadata = pd.merge(file_information, file_list_data_frame, on="uid", how="left")
     video_metadata.dropna(inplace=True)
     a4c_video_metadata = video_metadata[video_metadata["view"] == "a4c"]
     a2c_video_metadata = video_metadata[video_metadata["view"] == "a2c"]

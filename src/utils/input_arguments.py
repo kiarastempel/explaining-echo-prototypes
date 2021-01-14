@@ -13,5 +13,6 @@ def get_train_arguments():
     parser.add_argument('--dataset', default='stanford', choices=['stanford', 'mainz'])
     parser.add_argument('-m', '--model_name', default='vgg', choices=['vgg', 'resnet_18', 'resnet_34',
                                                                       'resnet_50', 'se-resnet_18'])
+    parser.add_argument('-a', '--augment', default=True, type=bool)
     parser.add_argument('-n', '--experiment_name', required=True)
     return parser.parse_args()
