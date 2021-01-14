@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow import keras
+#from vidaug import augmentors as va
 
 
 feature_description = {
@@ -15,6 +16,9 @@ data_augmentation = keras.Sequential(
     ]
 )
 
+# translation
+# rotation
+# brightness
 
 def build_dataset_validation(file_names):
     return build_dataset(file_names, 1, None, None, False)

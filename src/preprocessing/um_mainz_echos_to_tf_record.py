@@ -73,7 +73,7 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
         test_folder.mkdir(parents=True, exist_ok=True)
         train_folder.mkdir(exist_ok=True)
         validation_folder.mkdir(exist_ok=True)
-        width, height = echo_base.extract_metadata(train_samples['FileName'].iloc[0], input_path)
+        height, width = echo_base.extract_metadata(train_samples['FileName'].iloc[0], input_path)
 
         print(f'Create train record for {view} echocardiograms.')
         number_of_train_samples = create_tf_record(input_path, train_folder / 'train_{}.tfrecord', train_samples,

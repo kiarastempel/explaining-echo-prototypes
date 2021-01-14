@@ -55,7 +55,7 @@ def generate_tf_record(input_directory, output_directory, metadata_filename, sta
     train_folder.mkdir(exist_ok=True)
     validation_folder.mkdir(exist_ok=True)
 
-    width, height = echo_base.extract_metadata(train_samples.FileName[1], input_path)
+    height, width  = echo_base.extract_metadata(train_samples.FileName[1], input_path)
 
     print('Create train record.')
     number_of_train_samples = create_tf_record(input_path, train_folder / 'train_{}.tfrecord.gzip', train_samples,
