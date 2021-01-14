@@ -7,7 +7,7 @@ class CustomConv3D(keras.layers.Layer):
         super(CustomConv3D, self).__init__(**kwargs)
         self.custom_conv_3d = keras.Sequential()
         self.custom_conv_3d.add(keras.layers.Conv3D(kernel_number, kernel_size, strides, padding=padding,
-                                                    use_bias=not use_bn))
+                                                    use_bias=not use_bn, kernel_regularizer=keras.regularizers.l2()))
         if use_bn:
             self.custom_conv_3d.add(keras.layers.BatchNormalization())
         self.custom_conv_3d.add(keras.layers.ReLU())
@@ -22,7 +22,8 @@ class ResidualBlock(keras.layers.Layer):
         self.resnet_block = keras.Sequential(
             [
                 CustomConv3D(kernel_number, kernel_size, 1, padding='same', use_bn=True),
-                keras.layers.Conv3D(kernel_number, kernel_size, padding='same', use_bias=False),
+                keras.layers.Conv3D(kernel_number, kernel_size, padding='same', use_bias=False,
+                                    kernel_regularizer=keras.regularizers.l2()),
                 keras.layers.BatchNormalization()
             ]
         )
@@ -61,7 +62,8 @@ class ResidualConvBlock(keras.layers.Layer):
         self.resnet_conv_block = keras.Sequential(
             [
                 CustomConv3D(kernel_number, kernel_size, strides=strides, padding='same', use_bn=True),
-                keras.layers.Conv3D(kernel_number, kernel_size, padding='same', use_bias=False),
+                keras.layers.Conv3D(kernel_number, kernel_size, padding='same', use_bias=False,
+                                    kernel_regularizer=keras.regularizers.l2()),
                 keras.layers.BatchNormalization()
             ]
         )
