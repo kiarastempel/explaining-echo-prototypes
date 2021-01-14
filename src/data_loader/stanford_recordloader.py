@@ -55,7 +55,7 @@ def parse_and_augment_example(example, number_of_input_frames):
     raw_frames = tf.sparse.to_dense(parsed_example['frames'])
     start = tf.cond(number_of_input_frames == number_of_frames,
                     lambda: tf.constant(0, dtype=tf.int64),
-                    lambda: tf.random.uniform(shape=[], maxval=number_of_frames - number_of_input_frames - 1,
+                    lambda: tf.random.uniform(shape=[], maxval=number_of_frames - number_of_input_frames,
                                               dtype=tf.int64))
     raw_subframes = raw_frames[start: start + number_of_input_frames]
     subframes = tf.map_fn(tf.io.decode_jpeg, raw_subframes, fn_output_signature=tf.uint8)
