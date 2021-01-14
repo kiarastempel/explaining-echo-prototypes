@@ -47,7 +47,7 @@ class ThreeDConvolutionResNet34(keras.Model):
             keras.layers.experimental.preprocessing.Rescaling(scale=1 / std, offset=-mean / std,
                                                               input_shape=input_shape),
             # fix resnet head
-            keras.layers.Conv3D(64, 7, 2, use_bias=False),
+            keras.layers.Conv3D(64, 7, 2, use_bias=False, kernel_regularizer=keras.regularizers.l2()),
             keras.layers.BatchNormalization(),
             keras.layers.ReLU(),
             keras.layers.MaxPool3D(3, 2),
@@ -92,7 +92,7 @@ class ThreeDConvolutionResNet50(keras.Model):
             keras.layers.experimental.preprocessing.Rescaling(scale=1 / std, offset=-mean / std,
                                                               input_shape=input_shape),
             # fix resnet head
-            keras.layers.Conv3D(64, 7, 2, use_bias=False),
+            keras.layers.Conv3D(64, 7, 2, use_bias=False, kernel_regularizer=keras.regularizers.l2()),
             keras.layers.BatchNormalization(),
             keras.layers.ReLU(),
             keras.layers.MaxPool3D(3, 2),

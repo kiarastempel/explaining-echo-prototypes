@@ -26,9 +26,9 @@ class ThreeDConvolutionVGG(keras.Model):
                 CustomConv3D(256, 3, use_bn=batch_normalization),
                 keras.layers.Flatten(),
 
-                keras.layers.Dense(2048),
+                keras.layers.Dense(2048, kernel_regularizer=keras.regularizers.l2()),
                 keras.layers.ReLU(),
-                keras.layers.Dense(2048, activation='relu'),
+                keras.layers.Dense(2048, activation='relu', kernel_regularizer=keras.regularizers.l2()),
                 keras.layers.Dense(1)
             ]
         )

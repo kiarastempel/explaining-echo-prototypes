@@ -70,7 +70,7 @@ class ResidualConvBlock(keras.layers.Layer):
         self.relu = keras.layers.ReLU()
         self.shortcut_conv = keras.Sequential(
             [
-                keras.layers.Conv3D(kernel_number, 1, strides=strides),
+                keras.layers.Conv3D(kernel_number, 1, strides=strides, kernel_regularizer=keras.regularizers.l2()),
                 keras.layers.BatchNormalization()
             ]
         )
@@ -90,13 +90,13 @@ class ResidualConvBottleneckBlock(keras.layers.Layer):
             [
                 CustomConv3D(kernel_number, 1, strides=strides, use_bn=True),
                 CustomConv3D(kernel_number, kernel_size, padding='same', use_bn=True),
-                keras.layers.Conv3D(kernel_number * 4, 1, use_bias=False),
+                keras.layers.Conv3D(kernel_number * 4, 1, use_bias=False, kernel_regularizer=keras.regularizers.l2()),
                 keras.layers.BatchNormalization()
             ]
         )
         self.relu = keras.layers.ReLU()
         self.shortcut_conv = keras.Sequential([
-            keras.layers.Conv3D(kernel_number * 4, 1, strides=strides),
+            keras.layers.Conv3D(kernel_number * 4, 1, strides=strides, kernel_regularizer=keras.regularizers.l2()),
             keras.layers.BatchNormalization()
         ]
         )
@@ -115,7 +115,7 @@ class SqueezeAndExcitationPath(keras.layers.Layer):
         self.se_path = keras.Sequential(
             [
                 keras.layers.GlobalAvgPool3D(),
-                keras.layers.Dense(int(channel / ratio), activation='relu'),
+                keras.layers.Dense(int(channel / ratio), activation='relu', kernel_regularizer=keras.regularizers.l2()),
                 keras.layers.Dense(channel, activation='sigmoid'),
             ]
         )
@@ -133,7 +133,8 @@ class SqueezeAndExcitationResidualBlock(keras.layers.Layer):
         self.resnet_block = keras.Sequential(
             [
                 CustomConv3D(kernel_number, kernel_size, 1, padding='same', use_bn=True),
-                keras.layers.Conv3D(kernel_number, kernel_size, padding='same', use_bias=False),
+                keras.layers.Conv3D(kernel_number, kernel_size, padding='same', use_bias=False,
+                                    kernel_regularizer=keras.regularizers.l2()),
                 keras.layers.BatchNormalization()
             ]
         )
@@ -155,14 +156,15 @@ class SqueezeExcitationResidualConvBlock(keras.layers.Layer):
         self.resnet_conv_block = keras.Sequential(
             [
                 CustomConv3D(kernel_number, kernel_size, strides=strides, padding='same', use_bn=True),
-                keras.layers.Conv3D(kernel_number, kernel_size, padding='same', use_bias=False),
+                keras.layers.Conv3D(kernel_number, kernel_size, padding='same', use_bias=False,
+                                    kernel_regularizer=keras.regularizers.l2()),
                 keras.layers.BatchNormalization()
             ]
         )
         self.relu = keras.layers.ReLU()
         self.shortcut_conv = keras.Sequential(
             [
-                keras.layers.Conv3D(kernel_number, 1, strides=strides),
+                keras.layers.Conv3D(kernel_number, 1, strides=strides, kernel_regularizer=keras.regularizers.l2()),
                 keras.layers.BatchNormalization()
             ])
         self.se_path = SqueezeAndExcitationPath(kernel_number)
