@@ -94,7 +94,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
     for epoch in range(epochs):
         # training
-        for x_batch_train, y_batch_train in train_dataset.take(2):
+        for x_batch_train, y_batch_train in train_dataset:
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics)
 
         with file_writer_train.as_default():
@@ -102,7 +102,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             tf.summary.scalar('epoch_mae', data=train_mae_metric.result(), step=epoch)
 
         # validation
-        for x_batch_val, y_batch_val in validation_dataset.take(2):
+        for x_batch_val, y_batch_val in validation_dataset:
             first_frames = get_first_frames(x_batch_val, number_input_frames)
             # distinct_splits = get_distinct_splits(x_batch_val, number_input_frames)
             # overlapping_splits = get_overlapping_splits(x_batch_val, number_input_frames)
@@ -140,14 +140,16 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     predictions = []
     true_values = []
 
-    for x_batch_val, y_batch_val in validation_dataset.take(5):
+    for x_batch_val, y_batch_val in validation_dataset:
         first_frames = get_first_frames(x_batch_val, number_input_frames)
         prediction = validation_step(model, first_frames, y_batch_val, validation_mse_metric)
         predictions.append(prediction[0])
         true_values.append(y_batch_val[0])
+    predictions = tf.concat(predictions, 0)
+    true_values = tf.concat(true_values, 0)
     scatter_plot = visualise.create_scatter_plot(true_values, predictions)
     with file_writer_validation.as_default():
-        tf.summary.image('Regression Plot', scatter_plot)
+        tf.summary.image('Regression Plot', scatter_plot, step=0)
 
 
 @tf.function
