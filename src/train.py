@@ -22,11 +22,12 @@ from tensorflow import keras
 def main():
     args = utils.input_arguments.get_train_arguments()
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
-          Path(args.input_directory), args.dataset, args.model_name, args.experiment_name, args.augment)
+          Path(args.input_directory), args.dataset, args.model_name, args.experiment_name, args.augment,
+          args.regularization)
 
 
 def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_input_frames, input_directory, dataset,
-          model_name, experiment_name, augment):
+          model_name, experiment_name, augment, regularization):
     tf.random.set_seed(5)
 
     train_record_file_name = input_directory / 'tf_record' / 'train' / 'train_*.tfrecord.gzip'
@@ -68,11 +69,11 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
     train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
-               experiment_name, model_name)
+               experiment_name, model_name, regularization)
 
 
 def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
-               experiment_name, model_name):
+               experiment_name, model_name, regularization):
     early_stopping_counter = 0
     best_loss = math.inf
     train_mse_metric = keras.metrics.MeanSquaredError()
@@ -95,7 +96,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     for epoch in range(epochs):
         # training
         for x_batch_train, y_batch_train in train_dataset:
-            train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics)
+            train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics, regularization)
 
         with file_writer_train.as_default():
             tf.summary.scalar('epoch_loss', data=train_mse_metric.result(), step=epoch)
@@ -153,11 +154,12 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
 
 @tf.function
-def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, metrics):
+def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, metrics, regularization):
     with tf.GradientTape() as tape:
         predictions = model(x_batch_train, training=True)
         loss_value = loss_fn(y_batch_train, predictions)
-        loss_value += sum(model.losses)
+        if regularization:
+            loss_value += sum(model.losses)
     grads = tape.gradient(loss_value, model.trainable_weights)
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
     for metric in metrics:
