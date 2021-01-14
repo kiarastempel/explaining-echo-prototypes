@@ -24,7 +24,7 @@ from tensorflow import keras
 def main():
     args = utils.input_arguments.get_train_arguments()
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
-          Path(args.input_directory), args.dataset, args.model_name, args.experiment_name, args.augment,
+          Path(args.input_directory), args.dataset, args.model_name, args.experiment_name, args.augmentation,
           args.regularization, args.target)
 
 
