@@ -140,7 +140,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     predictions = []
     true_values = []
 
-    for x_batch_val, y_batch_val in validation_dataset.take(10):
+    for x_batch_val, y_batch_val in validation_dataset.take(5):
         first_frames = get_first_frames(x_batch_val, number_input_frames)
         prediction = validation_step(model, first_frames, y_batch_val, validation_mse_metric)
         predictions.append(prediction[0])
