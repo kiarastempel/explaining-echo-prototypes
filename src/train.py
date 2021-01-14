@@ -138,7 +138,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
         if validation_mse < best_loss:
             early_stopping_counter = 0
             best_loss = validation_mse
-            model.save(str(save_path), save_format="tf")
+            model.save_weights(str(save_path))
         else:
             early_stopping_counter += 1
             if early_stopping_counter > patience:

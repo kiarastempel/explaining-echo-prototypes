@@ -37,6 +37,7 @@ def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, 
     return ds.prefetch(AUTOTUNE)
 
 
+@tf.autograph.experimental.do_not_convert
 def parse_example(example, number_of_input_frames):
     parsed_example = tf.io.parse_example(example, feature_description)
     raw_frames = tf.sparse.to_dense(parsed_example['frames'])
@@ -49,6 +50,7 @@ def parse_example(example, number_of_input_frames):
     return subframes, parsed_example['ejection_fraction']
 
 
+@tf.autograph.experimental.do_not_convert
 def parse_and_augment_example(example, number_of_input_frames):
     parsed_example = tf.io.parse_example(example, feature_description)
     number_of_frames = parsed_example['number_of_frames']
