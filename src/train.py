@@ -1,7 +1,8 @@
 from utils import choose_gpu
 import os
-#os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
-#print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
+
+os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
+print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from datetime import datetime
 from models.three_D_vgg_net import ThreeDConvolutionVGG
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
@@ -15,6 +16,7 @@ import json
 import tensorflow as tf
 from tensorflow import keras
 
+
 # just for tests
 # import matplotlib.pyplot as plt
 
@@ -23,11 +25,11 @@ def main():
     args = utils.input_arguments.get_train_arguments()
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
           Path(args.input_directory), args.dataset, args.model_name, args.experiment_name, args.augment,
-          args.regularization)
+          args.regularization, args.target)
 
 
 def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_input_frames, input_directory, dataset,
-          model_name, experiment_name, augment, regularization):
+          model_name, experiment_name, augment, regularization, target):
     tf.random.set_seed(5)
 
     train_record_file_name = input_directory / 'tf_record' / 'train' / 'train_*.tfrecord.gzip'
@@ -46,9 +48,14 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         std = metadata['std']
         channels = metadata['channels']
 
-    train_dataset = stanford_recordloader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
-                                                        number_input_frames, augment=augment)
-    validation_dataset = stanford_recordloader.build_dataset_validation(str(validation_record_file_name))
+    if dataset == 'mainz':
+        train_dataset = mainz_recordloader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
+                                                         number_input_frames, target, augment=augment)
+        validation_dataset = mainz_recordloader.build_dataset_validation(str(validation_record_file_name), target)
+    elif dataset == 'stanford':
+        train_dataset = stanford_recordloader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
+                                                            number_input_frames, augment=augment)
+        validation_dataset = stanford_recordloader.build_dataset_validation(str(validation_record_file_name))
 
     # just for tests purposes
     # for test in train_set.take(1):
