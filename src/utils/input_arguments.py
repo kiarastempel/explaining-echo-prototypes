@@ -15,7 +15,14 @@ def get_train_arguments():
                                                                  'quality'])
     parser.add_argument('-m', '--model_name', default='vgg', choices=['vgg', 'resnet_18', 'resnet_34',
                                                                       'resnet_50', 'se-resnet_18'])
-    parser.add_argument('-a', '--augment', default=True, type=bool)
     parser.add_argument('-n', '--experiment_name', required=True)
-    parser.add_argument('-r', '--regularization', default=False, type=bool)
+
+    parser.add_argument('--augmentation', dest='augmentation', action='store_true')
+    parser.add_argument('--no-augmentation', dest='augmentation', action='store_false')
+    parser.set_defaults(augmentation=True)
+
+    parser.add_argument('--regularization', dest='regularization', action='store_true')
+    parser.add_argument('--no-regularization', dest='regularization', action='store_false')
+    parser.set_defaults(regularization=True)
+
     return parser.parse_args()
