@@ -26,3 +26,17 @@ def get_train_arguments():
     parser.set_defaults(regularization=True)
 
     return parser.parse_args()
+
+
+def get_test_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--input_directory', default='../data', help="Directory with the TFRecord files.")
+    parser.add_argument('-b', '--batch_size', default=16, type=int)
+    parser.add_argument('-f', '--number_input_frames', default=50, type=int)
+    parser.add_argument('--dataset', default='stanford', choices=['stanford', 'mainz'])
+    parser.add_argument('-t', '--target', default='EF', choices=['ejection_fraction', 'e_e_prime', 'gls',
+                                                                 'quality'])
+    parser.add_argument('--model_weights_path', required=True)
+    parser.add_argument('-m', '--model_name', required=True, choices=['vgg', 'resnet_18', 'resnet_34',
+                                                                      'resnet_50', 'se-resnet_18'])
+    return parser.parse_args()
