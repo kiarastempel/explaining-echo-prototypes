@@ -36,7 +36,5 @@ def get_test_arguments():
     parser.add_argument('--dataset', default='stanford', choices=['stanford', 'mainz'])
     parser.add_argument('-t', '--target', default='EF', choices=['ejection_fraction', 'e_e_prime', 'gls',
                                                                  'quality'])
-    parser.add_argument('--model_weights_path', required=True)
-    parser.add_argument('-m', '--model_name', required=True, choices=['vgg', 'resnet_18', 'resnet_34',
-                                                                      'resnet_50', 'se-resnet_18'])
+    parser.add_argument('--model_path', required=True)
     return parser.parse_args()

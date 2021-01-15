@@ -52,15 +52,15 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         train_dataset = mainz_recordloader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
                                                          number_input_frames, target, augment=augment)
         validation_dataset = mainz_recordloader.build_dataset_validation(str(validation_record_file_name), target)
-    elif dataset == 'stanford':
+    else:
         train_dataset = stanford_recordloader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
                                                             number_input_frames, augment=augment)
         validation_dataset = stanford_recordloader.build_dataset_validation(str(validation_record_file_name))
 
     # just for tests purposes
     # for test in train_set.take(1):
-    # plt.imshow(test[0][0][10], cmap='gray')
-    # plt.show()
+    #   for i in range(50):
+    #       plt.imshow(test[0][i], cmap='gray')
 
     if model_name == 'resnet_18':
         model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std)
@@ -147,7 +147,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     # visualization
     predictions = []
     true_values = []
-    model.load_weights(save_path)
+    model.load_weights(str(save_path))
     for x_batch_val, y_batch_val in validation_dataset.take(2):
         first_frames = get_first_frames(x_batch_val, number_input_frames)
         prediction = validation_step(model, first_frames, y_batch_val, validation_mse_metric)
@@ -158,6 +158,8 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     scatter_plot = visualise.create_scatter_plot(true_values, predictions)
     with file_writer_validation.as_default():
         tf.summary.image('Regression Plot', scatter_plot, step=0)
+
+    model.save(str(save_path))
 
 
 @tf.function

@@ -1,47 +1,49 @@
-import argparse
 from pathlib import Path
 import tensorflow as tf
 from tensorflow import keras
 import utils.input_arguments
-from models.three_D_vgg_net import ThreeDConvolutionVGG
-from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
-from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet18
-
 from data_loader import stanford_recordloader, mainz_recordloader
 
 
 def main():
     args = utils.input_arguments.get_test_arguments()
-    test(args.batch_size, args.number_input_frames, args.dataset, args.model_weights_path, args.input_directory,
-         args.model_name)
+    test(args.batch_size, args.number_input_frames, args.dataset, args.model_path, args.input_directory, args.target)
 
 
-def test(batch_size, number_input_frames, dataset, model_weights_path, input_directory, model_name):
+def test(batch_size, number_input_frames, dataset, model_path, input_directory, target):
     data_folder = Path(input_directory)
-    test_record_file_name = data_folder / 'test' / 'test_*.tfrecord.gzip'
+    test_record_file_names = data_folder / 'test' / 'test_*.tfrecord.gzip'
 
-    if model_name == 'resnet_18':
-        model = ThreeDConvolutionResNet18(width, height, None, None, None, None)
-    elif model_name == 'resnet_34':
-        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std)
-    elif model_name == 'resnet_50':
-        model = ThreeDConvolutionResNet50(width, height, number_input_frames, channels, mean, std)
-    elif model_name == 'se-resnet_18':
-        model = ThreeDConvolutionSqueezeAndExciationResNet18(width, height, number_input_frames, channels, mean, std)
+    model = keras.models.load_model(model_path)
+
+    if dataset == 'mainz':
+        test_dataset = mainz_recordloader.build_dataset_validation(str(test_record_file_names), target)
     else:
-        model = ThreeDConvolutionVGG(width, height, number_input_frames, channels, mean, std)
+        test_dataset = stanford_recordloader.build_dataset_validation(str(test_record_file_names))
 
-    test_set = stanford_recordloader.build_dataset_validation(str(test_record_file_name))
-    model = keras.models.load_model(model_weights_path)
+    test_mse_metric = keras.metrics.MeanSquaredError()
+    test_mae_metric = keras.metrics.MeanAbsoluteError()
 
-    print("Test MSE:", results)
+    # test
+    for x_batch_val, y_batch_val in test_dataset.take(2):
+        first_frames = get_first_frames(x_batch_val, number_input_frames)
+        test_step(model, first_frames, y_batch_val, test_mse_metric)
+        test_step(model, first_frames, y_batch_val, test_mae_metric)
+
+    print("Test MSE:", test_mse_metric.result().numpy())
+    print("Test MAE:", test_mae_metric.result().numpy())
 
 
-@tf.function
-def test_step(model, loss_fn, x_batch_validation, y_batch_validation, test_mse_metric):
-    predictions = model(x_batch_validation, training=True)
-    loss_value = loss_fn(y_batch_validation, predictions)
-    test_mse_metric.update_state(loss_value)
+@tf.function(experimental_relax_shapes=True)
+def test_step(model, x_validation, y_validation, validation_metric):
+    predictions = model(x_validation, training=False)
+    mean_prediction = tf.reduce_mean(predictions, keepdims=True)
+    validation_metric.update_state(y_validation, mean_prediction)
+    return mean_prediction
+
+
+def get_first_frames(video, number_of_frames):
+    return video[:, :number_of_frames, :, :, :]
 
 
 if __name__ == "__main__":
