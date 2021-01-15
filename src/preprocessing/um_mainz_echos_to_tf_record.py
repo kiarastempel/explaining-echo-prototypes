@@ -76,15 +76,15 @@ def generate_tf_record(input_directory, output_directory, standardisation_sample
         height, width = echo_base.extract_metadata(train_samples['FileName'].iloc[0], input_path)
 
         print(f'Create train record for {view} echocardiograms.')
-        number_of_train_samples = create_tf_record(input_path, train_folder / 'train_{}.tfrecord', train_samples,
+        number_of_train_samples = create_tf_record(input_path, train_folder / 'train_{}.tfrecord.gzip', train_samples,
                                                    needed_frames)
 
         print(f'Create test record  for {view} echocardiograms.')
-        number_of_test_samples = create_tf_record(input_path, test_folder / 'test_{}.tfrecord', validation_samples,
+        number_of_test_samples = create_tf_record(input_path, test_folder / 'test_{}.tfrecord.gzip', validation_samples,
                                                   needed_frames)
 
         print(f'Create validation record  for {view} echocardiograms')
-        number_of_validation_samples = create_tf_record(input_path, validation_folder / 'validation_{}.tfrecord',
+        number_of_validation_samples = create_tf_record(input_path, validation_folder / 'validation_{}.tfrecord.gzip',
                                                         test_samples, needed_frames)
 
         metadata_file_path = output_path / 'tf_records' / view / 'metadata.json'

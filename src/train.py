@@ -32,9 +32,9 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
           model_name, experiment_name, augment, regularization, target):
     tf.random.set_seed(5)
 
-    train_record_file_name = input_directory / 'tf_record' / 'train' / 'train_*.tfrecord.gzip'
-    validation_record_file_name = input_directory / 'tf_record' / 'validation' / 'validation_*.tfrecord.gzip'
-    metadata_path = input_directory / 'tf_record' / 'metadata.json'
+    train_record_file_name = input_directory / 'train' / 'train_*.tfrecord.gzip'
+    validation_record_file_name = input_directory / 'validation' / 'validation_*.tfrecord.gzip'
+    metadata_path = input_directory / 'metadata.json'
 
     with open(metadata_path) as metadata_file:
         metadata_json = json.load(metadata_file)
