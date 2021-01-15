@@ -25,7 +25,7 @@ def test(batch_size, number_input_frames, dataset, model_path, input_directory, 
     test_mae_metric = keras.metrics.MeanAbsoluteError()
 
     # test
-    for x_batch_val, y_batch_val in test_dataset.take(2):
+    for x_batch_val, y_batch_val in test_dataset:
         first_frames = get_first_frames(x_batch_val, number_input_frames)
         test_step(model, first_frames, y_batch_val, test_mse_metric)
         test_step(model, first_frames, y_batch_val, test_mae_metric)

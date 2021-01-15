@@ -49,7 +49,7 @@ class ResidualBottleneckBlock(keras.layers.Layer):
         )
         self.relu = keras.layers.ReLU()
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs, training=None, **kwargs):
         intermediate_output = self.resnet_bottleneck_block(inputs)
         output_sum = tf.add(intermediate_output, inputs)
         output = self.relu(output_sum)
@@ -101,7 +101,7 @@ class ResidualConvBottleneckBlock(keras.layers.Layer):
         ]
         )
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs, training=None, **kwargs):
         intermediate_output = self.resnet_conv_bottleneck_block(inputs)
         shortcut = self.shortcut_conv(inputs)
         output_sum = tf.add(intermediate_output, shortcut)
@@ -121,7 +121,7 @@ class SqueezeAndExcitationPath(keras.layers.Layer):
         )
         self.channel = channel
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs, training=None, **kwargs):
         weights = self.se_path(inputs)
         reshaped_weights = tf.reshape(weights, (-1, 1, 1, 1, self.channel))
         return reshaped_weights
