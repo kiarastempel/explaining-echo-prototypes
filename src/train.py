@@ -1,24 +1,26 @@
 from utils import choose_gpu
 import os
+from pathlib import Path
+import math
+import utils.input_arguments
+import json
+from datetime import datetime
+import vidaug.augmentors as va
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
 print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
-from datetime import datetime
 from models.three_D_vgg_net import ThreeDConvolutionVGG
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet18
 from data_loader import mainz_recordloader, stanford_recordloader
 from visualisation import visualise
-from pathlib import Path
-import math
-import utils.input_arguments
-import json
 import tensorflow as tf
 from tensorflow import keras
 
-
 # just for tests
 # import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('TKAgg')
 
 
 def main():
@@ -56,11 +58,6 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         train_dataset = stanford_recordloader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
                                                             number_input_frames, augment=augment)
         validation_dataset = stanford_recordloader.build_dataset_validation(str(validation_record_file_name))
-
-    # just for tests purposes
-    # for test in train_set.take(1):
-    #   for i in range(50):
-    #       plt.imshow(test[0][i], cmap='gray')
 
     if model_name == 'resnet_18':
         model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std)
@@ -103,6 +100,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     for epoch in range(epochs):
         # training
         for x_batch_train, y_batch_train in train_dataset:
+            x_batch_train = augment_test(x_batch_train)
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics, regularization)
 
         with file_writer_train.as_default():
@@ -207,6 +205,17 @@ def get_overlapping_splits(video, number_of_frames):
 
 def get_first_frames(video, number_of_frames):
     return video[:, :number_of_frames, :, :, :]
+
+
+def augment_test(videos):
+    augmented_videos = []
+    seq = va.Sequential([
+        va.RandomRotate(degrees=30),  # randomly rotates the video with a degree randomly chosen from [-10, 10]
+    ])
+    for video in videos:
+        augmented_videos.append(seq(video.numpy()))
+        augmented_batch = tf.stack(augmented_videos, 0)
+    return augmented_batch
 
 
 if __name__ == "__main__":
