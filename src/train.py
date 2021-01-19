@@ -214,7 +214,7 @@ def augment_test(videos):
     ])
     for video in videos:
         augmented_videos.append(seq(video.numpy()))
-        augmented_batch = tf.stack(augmented_videos, 0)
+    augmented_batch = tf.stack(augmented_videos, 0)
     return augmented_batch
 
 
