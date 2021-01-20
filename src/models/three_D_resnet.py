@@ -35,7 +35,7 @@ class ThreeDConvolutionResNet18(keras.Model):
         ]
         )
 
-    def call(self, inputs, training=False, **kwargs):
+    def call(self, inputs, training=None, **kwargs):
         return self.resnet(inputs)
 
 
@@ -125,5 +125,5 @@ class ThreeDConvolutionResNet50(keras.Model):
         ]
         )
 
-    def call(self, inputs, training=False, **kwargs):
+    def call(self, inputs, training=None, **kwargs):
         return self.resnet(inputs)
