@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow import keras
+import vidaug.augmentors as va
 
 
 feature_description = {
@@ -7,10 +7,6 @@ feature_description = {
     'ejection_fraction': tf.io.FixedLenFeature((), tf.float32),
     'number_of_frames': tf.io.FixedLenFeature((), tf.int64),
 }
-
-# translation
-# rotation
-# brightness
 
 
 def build_dataset_validation(file_names):
@@ -57,4 +53,19 @@ def parse_and_augment_example(example, number_of_input_frames):
     raw_subframes = raw_frames[start: start + number_of_input_frames]
     subframes = tf.map_fn(tf.io.decode_jpeg, raw_subframes, fn_output_signature=tf.uint8)
     subframes = tf.cast(subframes, tf.float32)
-    return subframes, parsed_example['ejection_fraction']
+    augmented_subframes = tf.py_function(func=augment_test, inp=[(subframes,)], Tout=tf.float32)
+    return augmented_subframes, parsed_example['ejection_fraction']
+
+
+def augment_test(videos):
+    seq = va.Sequential([
+        va.RandomRotate(degrees=20),  # randomly rotates the video with a degree randomly chosen from [-10, 10]
+    ])
+    augmented_video = []
+    for video in videos:
+        augmented_video.append(seq(video.numpy()))
+
+    return augmented_video
+# translation
+# rotation
+# brightness

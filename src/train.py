@@ -5,22 +5,22 @@ import math
 import utils.input_arguments
 import json
 from datetime import datetime
-import vidaug.augmentors as va
 
-# os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
-# print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
+os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
+print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from models.three_D_vgg_net import ThreeDConvolutionVGG
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet18
 from data_loader import mainz_recordloader, stanford_recordloader
-# from visualisation import visualise
+from visualisation import visualise
 import tensorflow as tf
 from tensorflow import keras
 
+
 # just for tests
 # import matplotlib.pyplot as plt
-#import matplotlib
-#matplotlib.use('TKAgg')
+# import matplotlib
+# matplotlib.use('TKAgg')
 
 
 def main():
@@ -58,6 +58,11 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         train_dataset = stanford_recordloader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
                                                             number_input_frames, augment=augment)
         validation_dataset = stanford_recordloader.build_dataset_validation(str(validation_record_file_name))
+
+    # for batch in train_dataset.take(1):
+    #     for i in range(number_input_frames):
+    #         plt.imshow(batch[0][0][i], cmap='gray')
+    #         plt.show()
 
     if model_name == 'resnet_18':
         model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std)
@@ -99,8 +104,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
     for epoch in range(epochs):
         # training
-        for x_batch_train, y_batch_train in train_dataset.take(2):
-            x_batch_train = augment_test(x_batch_train)
+        for x_batch_train, y_batch_train in train_dataset:
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics, regularization)
 
         with file_writer_train.as_default():
@@ -108,7 +112,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             tf.summary.scalar('epoch_mae', data=train_mae_metric.result(), step=epoch)
 
         # validation
-        for x_batch_val, y_batch_val in validation_dataset.take(2):
+        for x_batch_val, y_batch_val in validation_dataset:
             first_frames = get_first_frames(x_batch_val, number_input_frames)
             # distinct_splits = get_distinct_splits(x_batch_val, number_input_frames)
             # overlapping_splits = get_overlapping_splits(x_batch_val, number_input_frames)
@@ -146,16 +150,16 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     predictions = []
     true_values = []
     model.load_weights(str(save_path))
-    for x_batch_val, y_batch_val in validation_dataset.take(2):
+    for x_batch_val, y_batch_val in validation_dataset:
         first_frames = get_first_frames(x_batch_val, number_input_frames)
         prediction = validation_step(model, first_frames, y_batch_val, validation_mse_metric)
         predictions.append(prediction[0])
         true_values.append(y_batch_val[0])
     predictions = tf.concat(predictions, 0)
     true_values = tf.concat(true_values, 0)
-    #scatter_plot = visualise.create_scatter_plot(true_values, predictions)
-    # with file_writer_validation.as_default():
-     #    tf.summary.image('Regression Plot', scatter_plot, step=0)
+    scatter_plot = visualise.create_scatter_plot(true_values, predictions)
+    with file_writer_validation.as_default():
+        tf.summary.image('Regression Plot', scatter_plot, step=0)
     model.save(str(save_path))
 
 
@@ -205,17 +209,6 @@ def get_overlapping_splits(video, number_of_frames):
 
 def get_first_frames(video, number_of_frames):
     return video[:, :number_of_frames, :, :, :]
-
-
-def augment_test(videos):
-    augmented_videos = []
-    seq = va.Sequential([
-        va.RandomRotate(degrees=30),  # randomly rotates the video with a degree randomly chosen from [-10, 10]
-    ])
-    for video in videos:
-        augmented_videos.append(seq(video.numpy()))
-    augmented_batch = tf.stack(augmented_videos, 0)
-    return augmented_batch
 
 
 if __name__ == "__main__":
