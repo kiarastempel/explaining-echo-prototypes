@@ -16,6 +16,8 @@ from visualisation import visualise
 import tensorflow as tf
 from tensorflow import keras
 
+import time
+
 
 # just for tests
 # import matplotlib.pyplot as plt
@@ -77,6 +79,7 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
 
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
+    # benchmark(train_dataset)
     train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
                experiment_name, model_name, regularization)
 
@@ -185,6 +188,7 @@ def validation_step(model, x_validation, y_validation, validation_metric):
     return mean_prediction
 
 
+@tf.function
 def get_distinct_splits(video, number_of_frames):
     number_of_subvideos = int(video.shape[1] / number_of_frames)
     subvideos = []
@@ -195,6 +199,7 @@ def get_distinct_splits(video, number_of_frames):
     return tf.concat(subvideos, 0)
 
 
+@tf.function
 def get_overlapping_splits(video, number_of_frames):
     number_of_subvideos = int(video.shape[1] / (number_of_frames / 2)) - 1
     half_number_of_frames = int(number_of_frames / 2)
@@ -207,8 +212,18 @@ def get_overlapping_splits(video, number_of_frames):
     return tf.concat(subvideos, 0)
 
 
+@tf.function
 def get_first_frames(video, number_of_frames):
     return video[:, :number_of_frames, :, :, :]
+
+
+def benchmark(dataset, num_epochs=1):
+    start_time = time.perf_counter()
+    for epoch_num in range(num_epochs):
+        for sample, y in dataset.take(10):
+            # Performing a training step
+            pass
+    print("Execution time:", time.perf_counter() - start_time)
 
 
 if __name__ == "__main__":
