@@ -10,20 +10,23 @@ feature_description = {
 
 
 def build_dataset_validation(file_names):
-    return build_dataset(file_names, 1, None, None, False)
+    return build_dataset(file_names, 1, None, None, False, False)
 
 
-def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, augment=False):
+def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, augment=False, filter_samples=True):
     AUTOTUNE = tf.data.experimental.AUTOTUNE
     ds = tf.data.Dataset.list_files(file_names)
     ds = ds.interleave(lambda files: tf.data.TFRecordDataset(files, compression_type='GZIP'), cycle_length=AUTOTUNE,
                        num_parallel_calls=AUTOTUNE)
     ds = ds.map(lambda x: parse_example(x), num_parallel_calls=AUTOTUNE)
+    if filter_samples:
+        ds = ds.filter(lambda video, y, number_of_frames: number_of_frames >= number_of_input_frames)
+    ds = ds.map(lambda video, y, number_of_frames:  (video, y))
     ds = ds.cache()
     if augment:
-        ds = ds.map(lambda x, y: augment_example(x, y, number_of_input_frames), num_parallel_calls=AUTOTUNE)
+        ds = ds.map(lambda video, y: augment_example(video, y, number_of_input_frames), num_parallel_calls=AUTOTUNE)
     if shuffle_size is not None:
-        ds = ds.shuffle(shuffle_size, reshuffle_each_iteration=True)
+        ds = ds.shuffle(shuffle_size, reshuffle_each_iteration=True, )
     ds = ds.batch(batch_size=batch_size, drop_remainder=True)
     return ds.prefetch(AUTOTUNE)
 
@@ -31,9 +34,10 @@ def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, 
 def parse_example(example):
     parsed_example = tf.io.parse_example(example, feature_description)
     subframes = tf.sparse.to_dense(parsed_example['frames'])
+    number_of_frames = parsed_example['number_of_frames']
     subframes = tf.map_fn(tf.io.decode_jpeg, subframes, fn_output_signature=tf.uint8)
     subframes = tf.cast(subframes, tf.float32)
-    return subframes, parsed_example['ejection_fraction']
+    return subframes, parsed_example['ejection_fraction'], number_of_frames
 
 
 def augment_example(example, y, number_of_input_frames):
@@ -49,7 +53,8 @@ def augment_example(example, y, number_of_input_frames):
 
 def augment_test(videos):
     seq = va.Sequential([
-        #va.RandomRotate(degrees=20),  # randomly rotates the video with a degree randomly chosen from [-10, 10]
+        # unfortunately to slow
+        # va.RandomRotate(degrees=20)
         va.RandomTranslate(20, 20),
     ])
     augmented_video = []
