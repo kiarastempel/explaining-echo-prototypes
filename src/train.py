@@ -15,14 +15,12 @@ from data_loader import mainz_recordloader, stanford_recordloader
 from visualisation import visualise
 import tensorflow as tf
 from tensorflow import keras
-
 import time
 
 # just for tests
-import matplotlib.pyplot as plt
-import matplotlib
-
-matplotlib.use('TKAgg')
+#import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('TKAgg')
 
 
 def main():
@@ -61,10 +59,10 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
                                                             number_input_frames, augment=augment)
         validation_dataset = stanford_recordloader.build_dataset_validation(str(validation_record_file_name))
 
-    for batch in train_dataset.take(1):
-        for i in range(number_input_frames):
-            plt.imshow(batch[0][0][i], cmap='gray')
-            plt.show()
+    # for batch in train_dataset.take(1):
+    #     for i in range(number_input_frames):
+    #         plt.imshow(batch[0][0][i], cmap='gray')
+    #         plt.show()
 
     if model_name == 'resnet_18':
         model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std)

@@ -55,7 +55,7 @@ def augment_test(videos):
     seq = va.Sequential([
         # unfortunately to slow
         # va.RandomRotate(degrees=20)
-        va.RandomTranslate(20, 20),
+        va.RandomTranslate(10, 10),
     ])
     augmented_video = []
     for video in videos:
