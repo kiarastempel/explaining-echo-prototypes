@@ -43,7 +43,7 @@ class ResidualBottleneckBlock(keras.layers.Layer):
             [
                 CustomConv3D(kernel_number, 1, use_bn=True),
                 CustomConv3D(kernel_number, kernel_size, padding='same', use_bn=True),
-                keras.layers.Conv3D(kernel_number * 4, 1, use_bias=False),
+                keras.layers.Conv3D(kernel_number * 4, 1, use_bias=False, kernel_regularizer=keras.regularizers.l2()),
                 keras.layers.BatchNormalization()
             ]
         )
