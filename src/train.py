@@ -11,12 +11,12 @@ print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from models.three_D_vgg_net import ThreeDConvolutionVGG
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet18
-from data_loader import mainz_recordloader, stanford_recordloader
+from data_loader import tf_record_loader
 from visualisation import visualise
 import tensorflow as tf
 from tensorflow import keras
-
 import time
+
 
 # just for tests
 # import matplotlib.pyplot as plt
@@ -28,11 +28,11 @@ def main():
     args = utils.input_arguments.get_train_arguments()
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
           Path(args.input_directory), args.dataset, args.model_name, args.experiment_name, args.augmentation,
-          args.regularization, args.target)
+          args.regularization, args.target, args.inference_augmentation)
 
 
 def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_input_frames, input_directory, dataset,
-          model_name, experiment_name, augment, regularization, target):
+          model_name, experiment_name, augment, regularization, target, inference_augmentation):
     tf.random.set_seed(5)
 
     train_record_file_name = input_directory / 'train' / 'train_*.tfrecord.gzip'
@@ -51,15 +51,11 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         std = metadata['std']
         channels = metadata['channels']
 
-    if dataset == 'mainz':
-        train_dataset = mainz_recordloader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
-                                                         number_input_frames, target, augment=augment)
-        validation_dataset = mainz_recordloader.build_dataset_validation(str(validation_record_file_name), target)
-    else:
-        train_dataset = stanford_recordloader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
-                                                            number_input_frames, augment=augment)
-        validation_dataset = stanford_recordloader.build_dataset_validation(str(validation_record_file_name),
-                                                                            number_input_frames)
+    validation_batch_size = 1 if inference_augmentation else batch_size
+    train_dataset = tf_record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
+                                                   number_input_frames, augment, dataset, target)
+    validation_dataset = tf_record_loader.build_dataset(str(validation_record_file_name), validation_batch_size,
+                                                        None, number_input_frames, False, dataset, target)
 
     # for batch in train_dataset.take(1):
     #     for i in range(number_input_frames):
@@ -81,11 +77,11 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     loss_fn = keras.losses.MeanSquaredError()
     # benchmark(train_dataset)
     train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
-               experiment_name, model_name, regularization)
+               experiment_name, model_name, regularization, inference_augmentation)
 
 
 def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
-               experiment_name, model_name, regularization):
+               experiment_name, model_name, regularization, inference_augmentation):
     early_stopping_counter = 0
     best_loss = math.inf
     train_mse_metric = keras.metrics.MeanSquaredError()
@@ -116,24 +112,32 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
         # validation
         for x_batch_val, y_batch_val in validation_dataset:
-            first_frames = get_first_frames(x_batch_val, number_input_frames)
-            # distinct_splits = get_distinct_splits(x_batch_val, number_input_frames)
-            # overlapping_splits = get_overlapping_splits(x_batch_val, number_input_frames)
-            validation_step(model, first_frames, y_batch_val, validation_mse_metric)
-            validation_step(model, first_frames, y_batch_val, validation_mae_metric)
-            # validation_step(model, distinct_splits, y_batch_val, validation_mae_metric_distinct)
-            # validation_step(model, overlapping_splits, y_batch_val, validation_mae_metric_overlapping)
+            if not inference_augmentation:
+                val_predictions = model(x_batch_val, training=False)
+                validation_mse_metric.update_state(y_batch_val, val_predictions)
+                validation_mae_metric.update_state(y_batch_val, val_predictions)
+
+            elif inference_augmentation:
+                first_frames = get_first_frames(x_batch_val, number_input_frames)
+                validation_step(model, first_frames, y_batch_val, validation_mse_metric)
+                validation_step(model, first_frames, y_batch_val, validation_mae_metric)
+                distinct_splits = get_distinct_splits(x_batch_val, number_input_frames)
+                overlapping_splits = get_overlapping_splits(x_batch_val, number_input_frames)
+                validation_step(model, distinct_splits, y_batch_val, validation_mae_metric_distinct)
+                validation_step(model, overlapping_splits, y_batch_val, validation_mae_metric_overlapping)
 
         validation_mse = validation_mse_metric.result()
         validation_mae = validation_mae_metric.result()
-        # validation_mae_overlapping = validation_mae_metric_overlapping.result()
-        # validation_mae_distinct = validation_mae_metric_distinct.result()
+        if inference_augmentation:
+            validation_mae_overlapping = validation_mae_metric_overlapping.result()
+            validation_mae_distinct = validation_mae_metric_distinct.result()
 
         with file_writer_validation.as_default():
             tf.summary.scalar('epoch_loss', data=validation_mse, step=epoch)
             tf.summary.scalar('epoch_mae', data=validation_mae, step=epoch)
-            # tf.summary.scalar('epoch_mae_overlapping', data=validation_mae_overlapping, step=epoch)
-            # tf.summary.scalar('epoch_mae_distinct', data=validation_mae_distinct, step=epoch)
+            if inference_augmentation:
+                tf.summary.scalar('epoch_mae_overlapping', data=validation_mae_overlapping, step=epoch)
+                tf.summary.scalar('epoch_mae_distinct', data=validation_mae_distinct, step=epoch)
 
         for metric in (train_mse_metric, train_mae_metric, validation_mse_metric, validation_mae_metric,
                        validation_mae_metric_distinct, validation_mae_metric_overlapping):

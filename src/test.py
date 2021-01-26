@@ -2,24 +2,22 @@ from pathlib import Path
 import tensorflow as tf
 from tensorflow import keras
 import utils.input_arguments
-from data_loader import stanford_recordloader, mainz_recordloader
+from data_loader import tf_record_loader
 
 
 def main():
     args = utils.input_arguments.get_test_arguments()
-    test(args.batch_size, args.number_input_frames, args.dataset, args.model_path, args.input_directory, args.target)
+    test(args.number_input_frames, args.dataset, args.model_path, args.input_directory, args.target)
 
 
-def test(batch_size, number_input_frames, dataset, model_path, input_directory, target):
+def test(number_input_frames, dataset, model_path, input_directory, target):
     data_folder = Path(input_directory)
     test_record_file_names = data_folder / 'test' / 'test_*.tfrecord.gzip'
 
     model = keras.models.load_model(model_path)
 
-    if dataset == 'mainz':
-        test_dataset = mainz_recordloader.build_dataset_validation(str(test_record_file_names), target)
-    else:
-        test_dataset = stanford_recordloader.build_dataset_validation(str(test_record_file_names), number_input_frames)
+    test_dataset = tf_record_loader.build_dataset(str(test_record_file_names), None, 1, number_input_frames, False,
+                                                  dataset, target)
 
     test_mse_metric = keras.metrics.MeanSquaredError()
     test_mae_metric = keras.metrics.MeanAbsoluteError()

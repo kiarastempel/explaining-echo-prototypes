@@ -1,28 +1,21 @@
 import tensorflow as tf
 import vidaug.augmentors as va
+import feature_descriptors
 
 
-feature_description = {
-    'frames': tf.io.VarLenFeature(dtype=tf.string),
-    'ejection_fraction': tf.io.FixedLenFeature((), tf.float32),
-    'number_of_frames': tf.io.FixedLenFeature((), tf.int64),
-}
+def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, augment=False, dataset='stanford',
+                  target='ejection_fraction'):
 
+    feature_descriptor = feature_descriptors.mainz_feature_description if dataset == 'mainz' \
+        else feature_descriptors.stanford_feature_description
 
-def build_dataset_validation(file_names, number_of_input_frames):
-    return build_dataset(file_names, 1, None, number_of_input_frames, False, True)
-
-
-def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, augment=False, filter_samples=True):
     AUTOTUNE = tf.data.experimental.AUTOTUNE
     ds = tf.data.Dataset.list_files(file_names)
     ds = ds.interleave(lambda files: tf.data.TFRecordDataset(files, compression_type='GZIP'), cycle_length=AUTOTUNE,
                        num_parallel_calls=AUTOTUNE)
-    ds = ds.map(lambda x: parse_example(x), num_parallel_calls=AUTOTUNE)
-    if filter_samples:
-        ds = ds.filter(lambda video, y, number_of_frames: number_of_frames >= number_of_input_frames)
-    ds = ds.map(lambda video, y, number_of_frames:  (video, y))
-    ds = ds.cache()
+    ds = ds.map(lambda x: parse_example(x, feature_descriptor, target), num_parallel_calls=AUTOTUNE)
+    ds = ds.filter(lambda video, y, number_of_frames: number_of_frames >= number_of_input_frames)
+    ds = ds.map(lambda video, y, number_of_frames: (video, y))
     if shuffle_size is not None:
         ds = ds.shuffle(shuffle_size, reshuffle_each_iteration=True)
     if augment:
@@ -31,13 +24,13 @@ def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, 
     return ds.prefetch(AUTOTUNE)
 
 
-def parse_example(example):
-    parsed_example = tf.io.parse_example(example, feature_description)
+def parse_example(example, feature_descriptor, target):
+    parsed_example = tf.io.parse_example(example, feature_descriptor)
     subframes = tf.sparse.to_dense(parsed_example['frames'])
     number_of_frames = parsed_example['number_of_frames']
     subframes = tf.map_fn(tf.io.decode_jpeg, subframes, fn_output_signature=tf.uint8)
     subframes = tf.cast(subframes, tf.float32)
-    return subframes, parsed_example['ejection_fraction'], number_of_frames
+    return subframes, parsed_example[target], number_of_frames
 
 
 def augment_example(example, y, number_of_input_frames):
@@ -52,11 +45,14 @@ def augment_example(example, y, number_of_input_frames):
 
 
 def augment_test(videos):
+    def rare(aug): va.Sometimes(0.01, aug)
+    def sometimes(aug): va.Sometimes(0.3, aug)
+    brightness_factor = 1
     seq = va.Sequential([
-        # unfortunately to slow
-        # va.RandomRotate(degrees=20)
+        # very slow
+        # rare(va.RandomRotate(degrees=20)),
         va.RandomTranslate(10, 10),
-        va.Multiply
+        sometimes(va.Multiply(brightness_factor))
     ])
     augmented_video = []
     for video in videos:
