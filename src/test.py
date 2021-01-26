@@ -19,7 +19,7 @@ def test(batch_size, number_input_frames, dataset, model_path, input_directory, 
     if dataset == 'mainz':
         test_dataset = mainz_recordloader.build_dataset_validation(str(test_record_file_names), target)
     else:
-        test_dataset = stanford_recordloader.build_dataset_validation(str(test_record_file_names))
+        test_dataset = stanford_recordloader.build_dataset_validation(str(test_record_file_names), number_input_frames)
 
     test_mse_metric = keras.metrics.MeanSquaredError()
     test_mae_metric = keras.metrics.MeanAbsoluteError()

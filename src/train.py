@@ -58,7 +58,8 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     else:
         train_dataset = stanford_recordloader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
                                                             number_input_frames, augment=augment)
-        validation_dataset = stanford_recordloader.build_dataset_validation(str(validation_record_file_name))
+        validation_dataset = stanford_recordloader.build_dataset_validation(str(validation_record_file_name),
+                                                                            number_input_frames)
 
     # for batch in train_dataset.take(1):
     #     for i in range(number_input_frames):
