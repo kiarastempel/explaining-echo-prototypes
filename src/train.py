@@ -89,7 +89,7 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
 def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
                experiment_name, model_name, regularization, inference_augmentation,  load_checkpoint):
     start_epoch = 0
-    checkpoint = tf.train.Checkpoint(step_counter=tf.Variable(1), optimizer=optimizer, net=model, iterator=train_dataset)
+    checkpoint = tf.train.Checkpoint(step_counter=tf.Variable(0), optimizer=optimizer, net=model, iterator=train_dataset)
     checkpoint_path = Path('./tf_checkpoints', experiment_name)
     manager = tf.train.CheckpointManager(checkpoint, checkpoint_path, max_to_keep=2)
 
