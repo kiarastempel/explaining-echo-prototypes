@@ -6,8 +6,8 @@ import utils.input_arguments
 import json
 from datetime import datetime
 
-# os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
-# print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
+os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
+print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from models.three_D_vgg_net import ThreeDConvolutionVGG
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet18
@@ -19,9 +19,9 @@ import time
 import random
 
 # just for tests
-import matplotlib.pyplot as plt
-import matplotlib
-matplotlib.use('TkAgg')
+# import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('TkAgg')
 
 
 def main():
@@ -59,10 +59,10 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     validation_dataset = tf_record_loader.build_dataset(str(validation_record_file_name), validation_batch_size,
                                                         None, number_input_frames, False, dataset, target)
 
-    for batch in train_dataset.take(1):
-        for i in range(number_input_frames):
-            plt.imshow(batch[0][0][i], cmap='gray')
-            plt.show()
+    # for batch in train_dataset.take(1):
+        # for i in range(number_input_frames):
+            # plt.imshow(batch[0][0][i], cmap='gray')
+            # plt.show()
 
     if model_name == 'resnet_18':
         model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std)
@@ -77,8 +77,8 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
 
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
-    benchmark(train_dataset)
-    # train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
+    # benchmark(train_dataset)
+    train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
               # experiment_name, model_name, regularization, inference_augmentation)
 
 
@@ -113,8 +113,6 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             tf.summary.scalar('epoch_mae', data=train_mae_metric.result(), step=epoch)
 
         # validation
-        validation_mae_overlapping = 0
-        validation_mae_distinct = 0
         for x_batch_val, y_batch_val in validation_dataset.take(3):
             if not inference_augmentation:
                 val_predictions = model(x_batch_val, training=False)
