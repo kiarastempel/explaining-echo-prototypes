@@ -79,7 +79,7 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     loss_fn = keras.losses.MeanSquaredError()
     # benchmark(train_dataset)
     train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
-              # experiment_name, model_name, regularization, inference_augmentation)
+              experiment_name, model_name, regularization, inference_augmentation)
 
 
 def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
