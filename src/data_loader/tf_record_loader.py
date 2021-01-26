@@ -1,6 +1,6 @@
 import tensorflow as tf
 import vidaug.augmentors as va
-import feature_descriptors
+from . import feature_descriptors
 
 
 def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, augment=False, dataset='stanford',
@@ -20,6 +20,8 @@ def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, 
         ds = ds.shuffle(shuffle_size, reshuffle_each_iteration=True)
     if augment:
         ds = ds.map(lambda video, y: augment_example(video, y, number_of_input_frames), num_parallel_calls=AUTOTUNE)
+    else:
+        ds = ds.map(lambda video, y: first_frames(video, y, number_of_input_frames), num_parallel_calls=AUTOTUNE)
     ds = ds.batch(batch_size=batch_size, drop_remainder=True)
     return ds.prefetch(AUTOTUNE)
 
@@ -44,20 +46,21 @@ def augment_example(example, y, number_of_input_frames):
     return augmented_subframes, y
 
 
+def first_frames(video, target, number_input_frames):
+    return video[0: number_input_frames], target
+
+
 def augment_test(videos):
-    def rare(aug): va.Sometimes(0.01, aug)
-    def sometimes(aug): va.Sometimes(0.3, aug)
+    #def rare(aug): va.Sometimes(0.01, aug)
+   # def sometimes(aug): va.Sometimes(0.3, aug)
     brightness_factor = 1
     seq = va.Sequential([
-        # very slow
-        # rare(va.RandomRotate(degrees=20)),
+        # rotation is very slow
+       # rare(va.RandomRotate(degrees=20)),
         va.RandomTranslate(10, 10),
-        sometimes(va.Multiply(brightness_factor))
+       # sometimes(va.Multiply(brightness_factor))
     ])
     augmented_video = []
     for video in videos:
         augmented_video.append(seq(video.numpy()))
     return augmented_video
-# translation
-# rotation
-# brightness
