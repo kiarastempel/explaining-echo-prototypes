@@ -16,12 +16,12 @@ from visualisation import visualise
 import tensorflow as tf
 from tensorflow import keras
 import time
-
+import random
 
 # just for tests
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use('agg')
+matplotlib.use('TkAgg')
 
 
 def main():
@@ -33,7 +33,9 @@ def main():
 
 def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_input_frames, input_directory, dataset,
           model_name, experiment_name, augment, regularization, target, inference_augmentation):
+    # set random seeds for reproducibility
     tf.random.set_seed(5)
+    random.seed(5)
 
     train_record_file_name = input_directory / 'train' / 'train_*.tfrecord.gzip'
     validation_record_file_name = input_directory / 'validation' / 'validation_*.tfrecord.gzip'
@@ -57,10 +59,10 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     validation_dataset = tf_record_loader.build_dataset(str(validation_record_file_name), validation_batch_size,
                                                         None, number_input_frames, False, dataset, target)
 
-    # for batch in train_dataset.take(1):
-    #     for i in range(number_input_frames):
-    #         plt.imshow(batch[0][0][i], cmap='gray')
-    #         plt.show()
+    for batch in train_dataset.take(1):
+        for i in range(number_input_frames):
+            plt.imshow(batch[0][0][i], cmap='gray')
+            plt.show()
 
     if model_name == 'resnet_18':
         model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std)
@@ -75,9 +77,9 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
 
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
-    # benchmark(train_dataset)
-    train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
-               experiment_name, model_name, regularization, inference_augmentation)
+    benchmark(train_dataset)
+    # train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
+              # experiment_name, model_name, regularization, inference_augmentation)
 
 
 def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
@@ -226,7 +228,7 @@ def get_first_frames(video, number_of_frames):
 def benchmark(dataset, num_epochs=1):
     start_time = time.perf_counter()
     for epoch_num in range(num_epochs):
-        for sample, y in dataset.take(10):
+        for _, _ in dataset.take(10):
             # Performing a training step
             pass
     print("Execution time:", time.perf_counter() - start_time)

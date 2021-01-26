@@ -1,6 +1,7 @@
 import tensorflow as tf
 import vidaug.augmentors as va
 from . import feature_descriptors
+import random
 
 
 def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, augment=False, dataset='stanford',
@@ -51,14 +52,14 @@ def first_frames(video, target, number_input_frames):
 
 
 def augment_test(videos):
-    #def rare(aug): va.Sometimes(0.01, aug)
-   # def sometimes(aug): va.Sometimes(0.3, aug)
-    brightness_factor = 1
+    rare = lambda aug: va.Sometimes(0.01, aug)
+    sometimes = lambda aug: va.Sometimes(0.02, aug)
+    brightness_factor = random.uniform(0.9, 1.1)
     seq = va.Sequential([
         # rotation is very slow
-       # rare(va.RandomRotate(degrees=20)),
-        va.RandomTranslate(10, 10),
-       # sometimes(va.Multiply(brightness_factor))
+        rare(va.RandomRotate(degrees=10)),
+        # va.RandomTranslate(10, 10),
+        sometimes(va.Multiply(brightness_factor))
     ])
     augmented_video = []
     for video in videos:
