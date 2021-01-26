@@ -9,8 +9,8 @@ feature_description = {
 }
 
 
-def build_dataset_validation(file_names):
-    return build_dataset(file_names, 1, None, None, False, False)
+def build_dataset_validation(file_names, number_of_input_frames):
+    return build_dataset(file_names, 1, None, number_of_input_frames, False, True)
 
 
 def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, augment=False, filter_samples=True):
@@ -23,10 +23,10 @@ def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, 
         ds = ds.filter(lambda video, y, number_of_frames: number_of_frames >= number_of_input_frames)
     ds = ds.map(lambda video, y, number_of_frames:  (video, y))
     ds = ds.cache()
+    if shuffle_size is not None:
+        ds = ds.shuffle(shuffle_size, reshuffle_each_iteration=True)
     if augment:
         ds = ds.map(lambda video, y: augment_example(video, y, number_of_input_frames), num_parallel_calls=AUTOTUNE)
-    if shuffle_size is not None:
-        ds = ds.shuffle(shuffle_size, reshuffle_each_iteration=True, )
     ds = ds.batch(batch_size=batch_size, drop_remainder=True)
     return ds.prefetch(AUTOTUNE)
 
@@ -56,6 +56,7 @@ def augment_test(videos):
         # unfortunately to slow
         # va.RandomRotate(degrees=20)
         va.RandomTranslate(10, 10),
+        va.Multiply
     ])
     augmented_video = []
     for video in videos:

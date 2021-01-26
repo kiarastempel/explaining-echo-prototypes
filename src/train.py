@@ -6,8 +6,8 @@ import utils.input_arguments
 import json
 from datetime import datetime
 
-# os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
-# print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
+os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
+print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from models.three_D_vgg_net import ThreeDConvolutionVGG
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet18
@@ -15,10 +15,11 @@ from data_loader import mainz_recordloader, stanford_recordloader
 from visualisation import visualise
 import tensorflow as tf
 from tensorflow import keras
+
 import time
 
 # just for tests
-#import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 # import matplotlib
 # matplotlib.use('TKAgg')
 
