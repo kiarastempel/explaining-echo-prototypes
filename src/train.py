@@ -6,8 +6,8 @@ import utils.input_arguments
 import json
 from datetime import datetime
 
-# os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
-# print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
+os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
+print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from models.three_D_vgg_net import ThreeDConvolutionVGG
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet18
@@ -21,8 +21,8 @@ import random
 
 # just for tests
 # import matplotlib.pyplot as plt
-import matplotlib
-matplotlib.use('TkAgg')
+# import matplotlib
+# matplotlib.use('TkAgg')
 
 
 def main():
@@ -47,9 +47,6 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         metadata = metadata_json['metadata']
         width = metadata['frame_width']
         height = metadata['frame_height']
-        number_of_test_samples = metadata['number_of_test_samples']
-        number_of_train_samples = metadata['number_of_train_samples']
-        number_of_validation_samples = metadata['number_of_validation_samples']
         mean = metadata['mean']
         std = metadata['std']
         channels = metadata['channels']
@@ -89,7 +86,8 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
 def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
                experiment_name, model_name, regularization, inference_augmentation,  load_checkpoint):
     start_epoch = 0
-    checkpoint = tf.train.Checkpoint(step_counter=tf.Variable(0), optimizer=optimizer, net=model, iterator=train_dataset)
+    checkpoint = tf.train.Checkpoint(step_counter=tf.Variable(0), optimizer=optimizer, net=model,
+                                     iterator=train_dataset)
     checkpoint_path = Path('./tf_checkpoints', experiment_name)
     manager = tf.train.CheckpointManager(checkpoint, checkpoint_path, max_to_keep=2)
 
@@ -121,7 +119,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
     for epoch in range(start_epoch, epochs):
         # training
-        for x_batch_train, y_batch_train in train_dataset.take(3):
+        for x_batch_train, y_batch_train in train_dataset:
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics, regularization)
 
         with file_writer_train.as_default():
@@ -130,10 +128,12 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
         # checkpoint
         checkpoint.step_counter.assign_add(1)
-        manager.save()
+        # save every after every third epoch
+        if epoch % 3 == 0:
+            manager.save()
 
         # validation
-        for x_batch_val, y_batch_val in validation_dataset.take(3):
+        for x_batch_val, y_batch_val in validation_dataset:
             if not inference_augmentation:
                 val_predictions = model(x_batch_val, training=False)
                 validation_mse_metric.update_state(y_batch_val, val_predictions)
@@ -174,7 +174,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     predictions = []
     true_values = []
     model.load_weights(str(save_path))
-    for x_batch_val, y_batch_val in validation_dataset.take(3):
+    for x_batch_val, y_batch_val in validation_dataset:
         if not inference_augmentation:
             prediction = model(x_batch_val, training=False)
             predictions.append(tf.squeeze(prediction))
