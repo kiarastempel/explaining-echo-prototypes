@@ -5,7 +5,7 @@ import random
 
 
 def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, augment=False, dataset='stanford',
-                  target='ejection_fraction'):
+                  target='ejection_fraction', full_video=False):
 
     feature_descriptor = feature_descriptors.mainz_feature_description if dataset == 'mainz' \
         else feature_descriptors.stanford_feature_description
@@ -21,7 +21,7 @@ def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, 
         ds = ds.shuffle(shuffle_size, reshuffle_each_iteration=True)
     if augment:
         ds = ds.map(lambda video, y: augment_example(video, y, number_of_input_frames), num_parallel_calls=AUTOTUNE)
-    else:
+    elif not full_video:
         ds = ds.map(lambda video, y: first_frames(video, y, number_of_input_frames), num_parallel_calls=AUTOTUNE)
     ds = ds.batch(batch_size=batch_size, drop_remainder=True)
     return ds.prefetch(AUTOTUNE)
@@ -43,7 +43,7 @@ def augment_example(example, y, number_of_input_frames):
                     lambda: tf.random.uniform(shape=[], maxval=number_of_frames - number_of_input_frames,
                                               dtype=tf.int32))
     subframes = example[start: start + number_of_input_frames]
-    augmented_subframes = tf.py_function(func=augment_test, inp=[(subframes,)], Tout=tf.float32)
+    augmented_subframes = tf.py_function(func=augmentation, inp=[(subframes,)], Tout=tf.float32)
     return augmented_subframes, y
 
 
@@ -51,7 +51,7 @@ def first_frames(video, target, number_input_frames):
     return video[0: number_input_frames], target
 
 
-def augment_test(videos):
+def augmentation(videos):
     rare = lambda aug: va.Sometimes(0.01, aug)
     sometimes = lambda aug: va.Sometimes(0.02, aug)
     brightness_factor = random.uniform(0.9, 1.1)
