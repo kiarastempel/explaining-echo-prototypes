@@ -58,7 +58,7 @@ def augmentation(videos):
     seq = va.Sequential([
         # rotation is very slow
         rare(va.RandomRotate(degrees=10)),
-        # va.RandomTranslate(10, 10),
+        va.RandomTranslate(10, 10),
         sometimes(va.Multiply(brightness_factor))
     ])
     augmented_video = []
