@@ -72,6 +72,8 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         model = ThreeDConvolutionResNet50(width, height, number_input_frames, channels, mean, std)
     elif model_name == 'se-resnet_18':
         model = ThreeDConvolutionSqueezeAndExciationResNet18(width, height, number_input_frames, channels, mean, std)
+    elif model_name == 'se-resnet_34':
+        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std)
     else:
         model = ThreeDConvolutionVGG(width, height, number_input_frames, channels, mean, std)
 
