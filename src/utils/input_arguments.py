@@ -34,6 +34,7 @@ def get_train_arguments():
 
 def get_test_arguments():
     parser = argparse.ArgumentParser()
+    parser.add_argument('-b', '--batch_size', default=16, type=int)
     parser.add_argument('-i', '--input_directory', default='../data', help="Directory with the TFRecord files.")
     parser.add_argument('-f', '--number_input_frames', default=50, type=int)
     parser.add_argument('--dataset', default='stanford', choices=['stanford', 'mainz'])

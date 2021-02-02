@@ -3,7 +3,10 @@ import os
 from pathlib import Path
 import math
 import utils.input_arguments
+from utils import subvideos
 import json
+import time
+import random
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
 print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
@@ -14,9 +17,6 @@ from data_loader import tf_record_loader
 from visualisation import visualise
 import tensorflow as tf
 from tensorflow import keras
-import time
-import random
-
 
 # just for tests
 # import matplotlib.pyplot as plt
@@ -125,12 +125,6 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             tf.summary.scalar('epoch_loss', data=train_mse_metric.result(), step=epoch)
             tf.summary.scalar('epoch_mae', data=train_mae_metric.result(), step=epoch)
 
-        # checkpoint
-        checkpoint.step_counter.assign_add(1)
-        # save every after every third epoch
-        if epoch % 3 == 0:
-            manager.save()
-
         # validation
         for x_batch_val, y_batch_val in validation_dataset:
             val_predictions = model(x_batch_val, training=False)
@@ -142,10 +136,16 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             tf.summary.scalar('epoch_loss', data=validation_mse, step=epoch)
             tf.summary.scalar('epoch_mae', data=validation_mae_metric.result(), step=epoch)
 
+        # checkpoint
+        checkpoint.step_counter.assign_add(1)
+        # save every after every third epoch
+        if epoch % 3 == 0:
+            manager.save()
+
         for metric in (train_mse_metric, train_mae_metric, validation_mse_metric, validation_mae_metric):
             metric.reset_states()
 
-        # early stopping and save best model
+        # reduce lr on plateau and early stopping with save best model
         if validation_mse < best_loss:
             early_stopping_counter = 0
             best_loss = validation_mse
@@ -158,8 +158,8 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     validation_mae_metric_distinct = keras.metrics.MeanAbsoluteError()
     validation_mae_metric_overlapping = keras.metrics.MeanAbsoluteError()
     for x_batch_val, y_batch_val in mean_validation_dataset:
-        distinct_splits = get_distinct_splits(x_batch_val, number_input_frames)
-        overlapping_splits = get_overlapping_splits(x_batch_val, number_input_frames)
+        distinct_splits = subvideos.get_distinct_splits(x_batch_val, number_input_frames)
+        overlapping_splits = subvideos.get_overlapping_splits(x_batch_val, number_input_frames)
         validation_step(model, distinct_splits, y_batch_val, validation_mae_metric_distinct)
         validation_step(model, overlapping_splits, y_batch_val, validation_mae_metric_overlapping)
 
@@ -180,6 +180,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     scatter_plot = visualise.create_scatter_plot(true_values, predictions)
     with file_writer_validation.as_default():
         tf.summary.image('Regression Plot', scatter_plot, step=0)
+
     model.save(str(save_path))
 
 
@@ -203,35 +204,6 @@ def validation_step(model, x_validation, y_validation, validation_metric):
     mean_prediction = tf.reduce_mean(predictions, keepdims=True)
     validation_metric.update_state(y_validation, mean_prediction)
     return mean_prediction
-
-
-@tf.function(experimental_relax_shapes=True)
-def get_distinct_splits(video, number_of_frames):
-    number_of_subvideos = int(video.shape[1] / number_of_frames)
-    subvideos = []
-    for i in range(number_of_subvideos):
-        start = i * number_of_frames
-        end = start + number_of_frames
-        subvideos.append(video[:, start: end:, :, :, :])
-    return tf.concat(subvideos, 0)
-
-
-@tf.function(experimental_relax_shapes=True)
-def get_overlapping_splits(video, number_of_frames):
-    number_of_subvideos = int(video.shape[1] / (number_of_frames / 2)) - 1
-    half_number_of_frames = int(number_of_frames / 2)
-    subvideos = []
-
-    for i in range(number_of_subvideos):
-        start = i * half_number_of_frames
-        end = start + number_of_frames
-        subvideos.append(video[:, start: end:, :, :, :])
-    return tf.concat(subvideos, 0)
-
-
-@tf.function(experimental_relax_shapes=True)
-def get_first_frames(video, number_of_frames):
-    return video[:, :number_of_frames, :, :, :]
 
 
 def benchmark(dataset, num_epochs=1):
