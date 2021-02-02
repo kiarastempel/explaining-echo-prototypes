@@ -4,7 +4,6 @@ from pathlib import Path
 import math
 import utils.input_arguments
 import json
-from datetime import datetime
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
 print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
@@ -206,7 +205,7 @@ def validation_step(model, x_validation, y_validation, validation_metric):
     return mean_prediction
 
 
-@tf.function
+@tf.function(experimental_relax_shapes=True)
 def get_distinct_splits(video, number_of_frames):
     number_of_subvideos = int(video.shape[1] / number_of_frames)
     subvideos = []
@@ -217,7 +216,7 @@ def get_distinct_splits(video, number_of_frames):
     return tf.concat(subvideos, 0)
 
 
-@tf.function
+@tf.function(experimental_relax_shapes=True)
 def get_overlapping_splits(video, number_of_frames):
     number_of_subvideos = int(video.shape[1] / (number_of_frames / 2)) - 1
     half_number_of_frames = int(number_of_frames / 2)
@@ -230,7 +229,7 @@ def get_overlapping_splits(video, number_of_frames):
     return tf.concat(subvideos, 0)
 
 
-@tf.function
+@tf.function(experimental_relax_shapes=True)
 def get_first_frames(video, number_of_frames):
     return video[:, :number_of_frames, :, :, :]
 
