@@ -80,8 +80,6 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
 
-
-
     # benchmark(train_dataset)
     train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
                experiment_name, model_name, regularization,  load_checkpoint, mean_validation_dataset)
@@ -166,8 +164,9 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
         validation_step(model, distinct_splits, y_batch_val, validation_mae_metric_distinct)
         validation_step(model, overlapping_splits, y_batch_val, validation_mae_metric_overlapping)
 
-    tf.summary.scalar('epoch_mae_overlapping', data=validation_mae_metric_overlapping.result(), step=epochs)
-    tf.summary.scalar('epoch_mae_distinct', data=validation_mae_metric_distinct.result(), step=epochs)
+    with file_writer_validation.as_default():
+        tf.summary.scalar('epoch_mae_overlapping', data=validation_mae_metric_overlapping.result(), step=epochs)
+        tf.summary.scalar('epoch_mae_distinct', data=validation_mae_metric_distinct.result(), step=epochs)
 
     # visualization
     predictions = []
