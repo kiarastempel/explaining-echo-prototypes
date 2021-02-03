@@ -8,7 +8,7 @@ def get_train_arguments():
     parser.add_argument('-s', '--shuffle_size', default=1024, type=int)
     parser.add_argument('-e', '--epochs', default=200, type=int)
     parser.add_argument('-p', '--patience', default=10, type=int)
-    parser.add_argument('-l', '--learning_rate', default=0.001, type=float)
+    parser.add_argument('-l', '--learning_rate', default=0.0001, type=float)
     parser.add_argument('-f', '--number_input_frames', default=50, type=int)
     parser.add_argument('--dataset', default='stanford', choices=['stanford', 'mainz'])
     parser.add_argument('-t', '--target', default='ejection_fraction', choices=['ejection_fraction', 'e_e_prime', 'gls',

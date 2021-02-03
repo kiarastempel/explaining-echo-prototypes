@@ -20,8 +20,6 @@ from tensorflow import keras
 
 # just for tests
 # import matplotlib.pyplot as plt
-# import matplotlib
-# matplotlib.use('TkAgg')
 
 
 def main():
@@ -152,6 +150,8 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             model.save_weights(str(save_path))
         else:
             early_stopping_counter += 1
+            if early_stopping_counter > int(patience / 2):
+                optimizer.lr.assign(optimizer.lr.read_value() / 2)
             if early_stopping_counter > patience:
                 break
 
