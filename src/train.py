@@ -92,7 +92,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
     if load_checkpoint:
         checkpoint.restore(manager.latest_checkpoint)
-        start_epoch = int(checkpoint.step_counter)
+        start_epoch = int(checkpoint.step_counter + 1)
         if manager.latest_checkpoint:
             print("Restored from {}".format(manager.latest_checkpoint))
         else:
