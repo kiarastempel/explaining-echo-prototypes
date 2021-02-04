@@ -29,11 +29,12 @@ def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, 
 
 def parse_example(example, feature_descriptor, target):
     parsed_example = tf.io.parse_example(example, feature_descriptor)
-    subframes = tf.sparse.to_dense(parsed_example['frames'])
+    raw_frames = tf.sparse.to_dense(parsed_example['frames'])
     number_of_frames = parsed_example['number_of_frames']
-    subframes = tf.map_fn(tf.io.decode_jpeg, subframes, fn_output_signature=tf.uint8)
-    subframes = tf.cast(subframes, tf.float32)
-    return subframes, parsed_example[target], number_of_frames
+    frames = tf.map_fn(tf.io.decode_jpeg, raw_frames, fn_output_signature=tf.uint8)
+    resized_images = tf.image.resize(frames, (112, 112))
+    resized_images = tf.cast(resized_images, tf.float32)
+    return resized_images, parsed_example[target], number_of_frames
 
 
 def augment_example(example, y, number_of_input_frames):
