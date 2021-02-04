@@ -80,11 +80,11 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     # benchmark(train_dataset)
     save_name = '_'.join([experiment_name, model_name, dataset, target])
     train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
-               experiment_name, save_name, regularization,  load_checkpoint, mean_validation_dataset)
+                save_name, regularization,  load_checkpoint, mean_validation_dataset, target, dataset)
 
 
 def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
-               experiment_name, save_name, regularization,  load_checkpoint, mean_validation_dataset):
+               save_name, regularization,  load_checkpoint, mean_validation_dataset, target, dataset):
     start_epoch = 0
     checkpoint = tf.train.Checkpoint(step_counter=tf.Variable(0), optimizer=optimizer, net=model,
                                      iterator=train_dataset)
@@ -179,7 +179,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
         true_values.append(y_batch_val)
     predictions = tf.concat(predictions, 0)
     true_values = tf.concat(true_values, 0)
-    scatter_plot = visualise.create_scatter_plot(true_values, predictions)
+    scatter_plot = visualise.create_scatter_plot(true_values, predictions, target, dataset)
     with file_writer_validation.as_default():
         tf.summary.image('Regression Plot', scatter_plot, step=0)
 
