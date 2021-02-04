@@ -78,16 +78,17 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     loss_fn = keras.losses.MeanSquaredError()
 
     # benchmark(train_dataset)
+    save_name = '_'.join([experiment_name, model_name, dataset, target])
     train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
-               experiment_name, model_name, regularization,  load_checkpoint, mean_validation_dataset)
+               experiment_name, save_name, regularization,  load_checkpoint, mean_validation_dataset)
 
 
 def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
-               experiment_name, model_name, regularization,  load_checkpoint, mean_validation_dataset):
+               experiment_name, save_name, regularization,  load_checkpoint, mean_validation_dataset):
     start_epoch = 0
     checkpoint = tf.train.Checkpoint(step_counter=tf.Variable(0), optimizer=optimizer, net=model,
                                      iterator=train_dataset)
-    checkpoint_path = Path('./tf_checkpoints', experiment_name)
+    checkpoint_path = Path('./tf_checkpoints', save_name)
     manager = tf.train.CheckpointManager(checkpoint, checkpoint_path, max_to_keep=2)
 
     if load_checkpoint:
@@ -107,10 +108,11 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
     Path("../logs").mkdir(exist_ok=True)
     Path("../saved").mkdir(exist_ok=True)
-    log_dir = Path("../logs", '_'.join([experiment_name, model_name]))
+
+    log_dir = Path("../logs", save_name)
     log_dir_train = log_dir / 'train'
     log_dir_validation = log_dir / 'validation'
-    save_path = Path('../saved', '_'.join([experiment_name, model_name]))
+    save_path = Path('../saved', save_name)
     file_writer_train = tf.summary.create_file_writer(str(log_dir_train))
     file_writer_validation = tf.summary.create_file_writer(str(log_dir_validation))
 
