@@ -1,3 +1,5 @@
+import sys
+
 from utils import choose_gpu
 import os
 from pathlib import Path
@@ -8,8 +10,8 @@ import json
 import time
 import random
 
-os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
-print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
+# os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
+# print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from models.three_D_vgg_net import ThreeDConvolutionVGG
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet18
@@ -24,13 +26,21 @@ from tensorflow import keras
 
 def main():
     args = utils.input_arguments.get_train_arguments()
+
+    if args.resolution and len(args.resolution) == 1:
+        resolution = (args.resolution, args.resolution)
+    elif args.resolution and len(args.resolution) == 2:
+        resolution = args.resolution
+    else:
+        sys.exit('Argument --resolution takes one or two values')
+
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
           Path(args.input_directory), args.dataset, args.model_name, args.experiment_name, args.augmentation,
-          args.regularization, args.target, args.load_checkpoint)
+          args.regularization, args.target, args.load_checkpoint, resolution)
 
 
 def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_input_frames, input_directory, dataset,
-          model_name, experiment_name, augment, regularization, target, load_checkpoint):
+          model_name, experiment_name, augment, regularization, target, load_checkpoint, resolution):
     # set random seeds for reproducibility
     tf.random.set_seed(5)
     random.seed(5)
@@ -49,12 +59,12 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         channels = metadata['channels']
 
     train_dataset = tf_record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
-                                                   number_input_frames, augment, dataset, target)
+                                                   number_input_frames, augment, dataset, target, resolution)
     validation_dataset = tf_record_loader.build_dataset(str(validation_record_file_name), batch_size,
                                                         None, number_input_frames, False, dataset, target)
     mean_validation_dataset = tf_record_loader.build_dataset(str(validation_record_file_name), 1, None,
                                                              number_input_frames, False, dataset, target,
-                                                             full_video=True)
+                                                             full_video=True, resolution=resolution)
 
     # for batch in train_dataset.take(1):
     # for i in range(number_input_frames):
@@ -118,7 +128,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
     for epoch in range(start_epoch, epochs):
         # training
-        for x_batch_train, y_batch_train in train_dataset:
+        for x_batch_train, y_batch_train in train_dataset.take(1):
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics, regularization)
 
         with file_writer_train.as_default():
@@ -126,7 +136,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             tf.summary.scalar('epoch_mae', data=train_mae_metric.result(), step=epoch)
 
         # validation
-        for x_batch_val, y_batch_val in validation_dataset:
+        for x_batch_val, y_batch_val in validation_dataset.take(1):
             val_predictions = model(x_batch_val, training=False)
             validation_mse_metric.update_state(y_batch_val, val_predictions)
             validation_mae_metric.update_state(y_batch_val, val_predictions)
@@ -159,7 +169,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
     validation_mae_metric_distinct = keras.metrics.MeanAbsoluteError()
     validation_mae_metric_overlapping = keras.metrics.MeanAbsoluteError()
-    for x_batch_val, y_batch_val in mean_validation_dataset:
+    for x_batch_val, y_batch_val in mean_validation_dataset.take(1):
         distinct_splits = subvideos.get_distinct_splits(x_batch_val, number_input_frames)
         overlapping_splits = subvideos.get_overlapping_splits(x_batch_val, number_input_frames)
         validation_step(model, distinct_splits, y_batch_val, validation_mae_metric_distinct)

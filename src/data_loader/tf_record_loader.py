@@ -5,7 +5,7 @@ import random
 
 
 def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, augment=False, dataset='stanford',
-                  target='ejection_fraction', full_video=False):
+                  target='ejection_fraction', full_video=False, resolution=(112, 112)):
 
     feature_descriptor = feature_descriptors.mainz_feature_description if dataset == 'mainz' \
         else feature_descriptors.stanford_feature_description
@@ -14,7 +14,7 @@ def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, 
     ds = tf.data.Dataset.list_files(file_names)
     ds = ds.interleave(lambda files: tf.data.TFRecordDataset(files, compression_type='GZIP'), cycle_length=AUTOTUNE,
                        num_parallel_calls=AUTOTUNE)
-    ds = ds.map(lambda x: parse_example(x, feature_descriptor, target), num_parallel_calls=AUTOTUNE)
+    ds = ds.map(lambda x: parse_example(x, feature_descriptor, target, resolution), num_parallel_calls=AUTOTUNE)
     ds = ds.filter(lambda video, y, number_of_frames: number_of_frames >= number_of_input_frames)
     ds = ds.map(lambda video, y, number_of_frames: (video, y))
     if shuffle_size is not None:
@@ -27,12 +27,12 @@ def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, 
     return ds.prefetch(AUTOTUNE)
 
 
-def parse_example(example, feature_descriptor, target):
+def parse_example(example, feature_descriptor, target, resolution):
     parsed_example = tf.io.parse_example(example, feature_descriptor)
     raw_frames = tf.sparse.to_dense(parsed_example['frames'])
     number_of_frames = parsed_example['number_of_frames']
     frames = tf.map_fn(tf.io.decode_jpeg, raw_frames, fn_output_signature=tf.uint8)
-    resized_images = tf.image.resize(frames, (112, 112))
+    resized_images = tf.image.resize(frames, resolution)
     resized_images = tf.cast(resized_images, tf.float32)
     return resized_images, parsed_example[target], number_of_frames
 
