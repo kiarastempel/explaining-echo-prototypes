@@ -32,7 +32,7 @@ def parse_example(example, feature_descriptor, target, resolution):
     raw_frames = tf.sparse.to_dense(parsed_example['frames'])
     number_of_frames = parsed_example['number_of_frames']
     frames = tf.map_fn(tf.io.decode_jpeg, raw_frames, fn_output_signature=tf.uint8)
-    resized_images = tf.image.resize(frames, resolution)
+    resized_images = tf.image.resize_with_pad(frames, resolution[0], resolution[1])
     resized_images = tf.cast(resized_images, tf.float32)
     return resized_images, parsed_example[target], number_of_frames
 

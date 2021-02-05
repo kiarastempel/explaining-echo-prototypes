@@ -16,7 +16,7 @@ def get_train_arguments():
     parser.add_argument('-m', '--model_name', default='vgg', choices=['vgg', 'resnet_18', 'resnet_34',
                                                                       'resnet_50', 'se-resnet_18', 'se-resnet_34'])
     parser.add_argument('-n', '--experiment_name', required=True)
-    parser.add_argument('--resolution', nargs='+', metavar=('height', 'width'), default=(112, 112))
+    parser.add_argument('--resolution', nargs='+', metavar=('height', 'width'), type=int)
 
     parser.add_argument('--augmentation', dest='augmentation', action='store_true')
     parser.add_argument('--no-augmentation', dest='augmentation', action='store_false')

@@ -28,7 +28,7 @@ def main():
     args = utils.input_arguments.get_train_arguments()
 
     if args.resolution and len(args.resolution) == 1:
-        resolution = (args.resolution, args.resolution)
+        resolution = (args.resolution[0], args.resolution[0])
     elif args.resolution and len(args.resolution) == 2:
         resolution = args.resolution
     else:
@@ -58,10 +58,13 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         std = metadata['std']
         channels = metadata['channels']
 
+    if resolution[0] is None:
+        resolution = (width, height)
     train_dataset = tf_record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
-                                                   number_input_frames, augment, dataset, target, resolution)
+                                                   number_input_frames, augment, dataset, target, resolution=resolution)
     validation_dataset = tf_record_loader.build_dataset(str(validation_record_file_name), batch_size,
-                                                        None, number_input_frames, False, dataset, target)
+                                                        None, number_input_frames, False, dataset, target,
+                                                        resolution=resolution)
     mean_validation_dataset = tf_record_loader.build_dataset(str(validation_record_file_name), 1, None,
                                                              number_input_frames, False, dataset, target,
                                                              full_video=True, resolution=resolution)
