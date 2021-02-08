@@ -20,6 +20,7 @@ from visualisation import visualise
 import tensorflow as tf
 from tensorflow import keras
 
+
 # just for tests
 # import matplotlib.pyplot as plt
 
@@ -73,19 +74,21 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     # for i in range(number_input_frames):
     # plt.imshow(batch[0][0][i], cmap='gray')
     # plt.show()
+    output = 3 if target == 'all' else 1
 
     if model_name == 'resnet_18':
-        model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std)
+        model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std, output)
     elif model_name == 'resnet_34':
-        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std)
+        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std, output)
     elif model_name == 'resnet_50':
-        model = ThreeDConvolutionResNet50(width, height, number_input_frames, channels, mean, std)
+        model = ThreeDConvolutionResNet50(width, height, number_input_frames, channels, mean, std, output)
     elif model_name == 'se-resnet_18':
-        model = ThreeDConvolutionSqueezeAndExciationResNet18(width, height, number_input_frames, channels, mean, std)
+        model = ThreeDConvolutionSqueezeAndExciationResNet18(width, height, number_input_frames, channels, mean, std
+                                                             , output)
     elif model_name == 'se-resnet_34':
-        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std)
+        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std, output)
     else:
-        model = ThreeDConvolutionVGG(width, height, number_input_frames, channels, mean, std)
+        model = ThreeDConvolutionVGG(width, height, number_input_frames, channels, mean, std, output)
 
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
@@ -93,11 +96,11 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     # benchmark(train_dataset)
     save_name = '_'.join([experiment_name, model_name, dataset, target])
     train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
-                save_name, regularization,  load_checkpoint, mean_validation_dataset, target, dataset)
+               save_name, regularization, load_checkpoint, mean_validation_dataset, target, dataset)
 
 
 def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
-               save_name, regularization,  load_checkpoint, mean_validation_dataset, target, dataset):
+               save_name, regularization, load_checkpoint, mean_validation_dataset, target, dataset):
     start_epoch = 0
     checkpoint = tf.train.Checkpoint(step_counter=tf.Variable(0), optimizer=optimizer, net=model,
                                      iterator=train_dataset)

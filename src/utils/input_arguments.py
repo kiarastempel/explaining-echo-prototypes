@@ -12,7 +12,7 @@ def get_train_arguments():
     parser.add_argument('-f', '--number_input_frames', default=50, type=int)
     parser.add_argument('--dataset', default='stanford', choices=['stanford', 'mainz'])
     parser.add_argument('-t', '--target', default='ejection_fraction', choices=['ejection_fraction', 'e_e_prime', 'gls',
-                                                                                'quality'])
+                                                                                'quality', 'all'])
     parser.add_argument('-m', '--model_name', default='vgg', choices=['vgg', 'resnet_18', 'resnet_34',
                                                                       'resnet_50', 'se-resnet_18', 'se-resnet_34'])
     parser.add_argument('-n', '--experiment_name', required=True)

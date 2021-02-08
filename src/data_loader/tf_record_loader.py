@@ -34,7 +34,8 @@ def parse_example(example, feature_descriptor, target, resolution):
     frames = tf.map_fn(tf.io.decode_jpeg, raw_frames, fn_output_signature=tf.uint8)
     resized_images = tf.image.resize_with_pad(frames, resolution[0], resolution[1])
     resized_images = tf.cast(resized_images, tf.float32)
-    return resized_images, parsed_example[target], number_of_frames
+    y = parsed_example['ejection_fraction', 'e_e_prime', ] if target == 'all' else parsed_example[target]
+    return resized_images,  y, number_of_frames
 
 
 def augment_example(example, y, number_of_input_frames):
