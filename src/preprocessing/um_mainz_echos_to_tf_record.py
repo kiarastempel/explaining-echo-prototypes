@@ -110,8 +110,8 @@ def create_tf_record(input_directory, output_file, samples, needed_frames=50):
             if index + 1 == file_limit:
                 end = len(samples)
             for file_name, ejection_fraction, e_e_prime, quality in zip(samples.FileName[start: end],
-                                                                        samples.EF[start: end],
-                                                                        samples.E_E_prime_Ratio[start:end],
+                                                                        samples.manualEF[start: end],
+                                                                        samples.E_E_prime_ratio[start:end],
                                                                         samples.grade[start:end]):
                 video = echo_base.load_video(input_directory / 'Videos' / file_name, needed_frames)
                 if video is not None:
