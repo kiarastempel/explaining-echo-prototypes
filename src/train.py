@@ -1,18 +1,17 @@
-import sys
-
-from utils import choose_gpu
-import os
-from pathlib import Path
-import math
-import utils.input_arguments
-from utils import subvideos
 import json
-import time
+import math
+import os
 import random
+import sys
+import time
+from pathlib import Path
 
-os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
-print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
-from models.three_D_vgg_net import ThreeDConvolutionVGG
+import utils.input_arguments
+from utils import choose_gpu
+from utils import subvideos
+
+# os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
+# print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet18
 from data_loader import tf_record_loader
@@ -27,8 +26,7 @@ from tensorflow import keras
 
 def main():
     args = utils.input_arguments.get_train_arguments()
-
-    if args.resolution and len(args.resolution) == 1:
+    if len(args.resolution) == 1:
         resolution = (args.resolution[0], args.resolution[0])
     elif args.resolution and len(args.resolution) == 2:
         resolution = args.resolution
@@ -59,8 +57,6 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         std = metadata['std']
         channels = metadata['channels']
 
-    if resolution[0] is None:
-        resolution = (width, height)
     train_dataset = tf_record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
                                                    number_input_frames, augment, dataset, target, resolution=resolution)
     validation_dataset = tf_record_loader.build_dataset(str(validation_record_file_name), batch_size,
