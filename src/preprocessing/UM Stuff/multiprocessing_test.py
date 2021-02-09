@@ -1,3 +1,7 @@
+import warnings
+warnings.filterwarnings("ignore")
+
+
 import io
 import os
 from pathlib import Path
@@ -10,6 +14,9 @@ from tqdm import tqdm
 import pyodbc
 import shutil
 import sqlserverport
+
+from multiprocessing import Pool, cpu_count
+
 
 
 #sudo docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=ThatIsAPassword1234" -p 1433:1433 --name sql1 -h sql1 -d mcr.microsoft.com/mssql/server:2019-latest
@@ -31,10 +38,16 @@ class CHandleDatabase:
         #self.cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database + ';User=yes', timeout=180)
         self.cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';PORT='+port+';DATABASE=' + database + ';UID=sa;PWD=Db630475$', timeout=30)
         cursor = self.cnxn.cursor()
-        print("SQL DB conncted")
+        #print("SQL DB conncted")
         return cursor
 
-    def get_campusID(self, subdirname):
+    def close_connection(self):
+        #self._cursor.close()
+        self.cnxn.close()
+        #print("SQL DB closed")
+        return
+
+    def get_campusID_old(self, subdirname):
         self._cursor.execute('SELECT myoid FROM dbo.TableEchoMeasureStatus WHERE REPLACE(studyuid, \'.\',\'\') like \'%' + subdirname + '%\' and status=2')
         row = self._cursor.fetchone()
         if(row!=None):
@@ -44,12 +57,21 @@ class CHandleDatabase:
             if(uidrow!=None):
                 return str(uidrow.id)
             else:
-                print("No CampusID found for: " + myoid)
+                #print("No CampusID found for: " + myoid)
                 return None
         return None
-
-
+    
     def get_campusID(self, subdirname):
+        self._cursor.execute('SELECT uud.id, uud.myoid, uud.done_converting FROM dbo.TableEchoMeasureStatus as stat left join dbo.UUIDtoMYOID as uud on stat.myoid=uud.myoid WHERE REPLACE(studyuid, \'.\',\'\') like \'%' + subdirname + '%\' and status=2 and done_converting=0')
+        row = self._cursor.fetchone()
+        if(row!=None):
+            return str(row.id), row.myoid, row.done_converting
+       
+        #print("No CampusID found for: " + myoid)    
+        return None, None, None
+
+
+    def get_campusID_old(self, subdirname):
         self._cursor.execute('SELECT myoid FROM dbo.TableEchoMeasureStatus where REPLACE(studyuid, \'.\',\'\') like \'%' + subdirname + '%\' and status=2')
         row = self._cursor.fetchone()
         if(row!=None):
@@ -59,7 +81,7 @@ class CHandleDatabase:
             if(uidrow!=None):
                 return str(uidrow.id), myoid, uidrow.done_converting
             else:
-                print("No CampusID found for: " + myoid)
+                #print("No CampusID found for: " + myoid)
                 return None, myoid, None
         return None, None, None
 
@@ -77,73 +99,52 @@ class CHandleDatabase:
         else:
             return None    
 
-def main():
+def process_path(echofolder):
+    result_path = Path('/home/tro2s/echoconverter/processedBL')
     ## Initialise DB class
     DBHandler = CHandleDatabase()
 
+    video_paths = [x for x in echofolder.iterdir() if x.is_file()]
+    # Identify subdir
+    subdir = echofolder.parts[echofolder.parts.__len__()-1]
 
-    print("Curent dir:" + os.getcwd())
-    #
-    #result_path = Path(os.getcwd() +'/data/processed')
-    #data_path = Path(os.getcwd() + '/data/raw')
+    #get corresponding CampusID
+    campusid, myoid, done_converting = DBHandler.get_campusID(subdir)
+
+    counter = 0
+    if(campusid!=None):
+        for video_path in video_paths:
+            try:
+                #set destination folder based on campusid
+                destination_folder = (result_path)
+                destination_folder.mkdir(parents=True, exist_ok=True)
+
+                #get view as classified
+                view = DBHandler.getView(myoid,video_path.stem)
+                if(view!=None):
+                    #view = "unknown"
+                    counter= counter + 1
+                    make_video(video_path, destination_folder, campusid, view )
+
+                
+            except:
+                DBHandler.close_connection()
+                print("Error: " + str(video_path))
 
 
-    #result_path = Path('D:\processed')
-    #data_path = Path('D:\Jul2020')
-
-
-    result_path = Path('/home/tro2s/echoconverter/processedBL')
-    data_path = Path('/mnt/windows_share/dicom_storage')
-
-    p = data_path.glob('**/*')
-
-    # Get all Subfolders of data_path
-    subfolders = [e for e in data_path.iterdir() if e.is_dir()]
-    for folder in subfolders:
-        print(folder)
-
-    #iterate through all paths
-    for echofolder in tqdm(subfolders):
-        video_paths = [x for x in echofolder.iterdir() if x.is_file()]
-        # Identify subdir
-        subdir = echofolder.parts[echofolder.parts.__len__()-1]
-
-        #get corresponding CampusID
-        campusid, myoid, done_converting = DBHandler.get_campusID(subdir)
-
-        #check if ID was already processed. Beake if true
-        #if(done_converting==1):
-        #    break;
-
-        counter = 0
-        if(campusid!=None):
-            for video_path in video_paths:
-                try:
-                    #set destination folder based on campusid
-                    destination_folder = (result_path)
-                    destination_folder.mkdir(parents=True, exist_ok=True)
-
-                    #get view as classified
-                    view = DBHandler.getView(myoid,video_path.stem)
-                    if(view!=None):
-                        #view = "unknown"
-                        counter= counter + 1
-                        make_video(video_path, destination_folder, campusid, view )
-
-                    
-                except:
-                    print("Error: " + str(video_path))
-
-        ## If MYOID done set done 
-        if(counter<video_paths.__len__()):
-            #shutil.rmtree(echofolder)
-            DBHandler.setCampusIDDone(campusid)
+    ## If MYOID done set done 
+    if(counter<video_paths.__len__()):
+        #shutil.rmtree(echofolder)
+        DBHandler.setCampusIDDone(campusid)
+    
+    DBHandler.close_connection()
+    return True
 
 
 def make_video(file_to_process, destination_folder, campusid, view):
     file_name = campusid + "_" + view + "_" + file_to_process.stem
     
-    print(f'Processing {file_name}')
+    #print(f'Processing {file_name}')
     
     video_filename = (destination_folder / file_name).with_suffix('.avi')
     dicom_filename = (destination_folder / file_name).with_suffix('.dcm')
@@ -206,8 +207,9 @@ def make_video(file_to_process, destination_folder, campusid, view):
         dicom_file.CineRate = 50
         #dicom_file.save_as(dicom_filename, write_like_original=False)
 
-    else:
-        print(file_name, "hasAlreadyBeenProcessed")
+    #else:
+        #print(file_name, "hasAlreadyBeenProcessed")
+    return True
 
 
 def mask_image(output):
@@ -228,6 +230,32 @@ def mask_image(output):
     triangle_right = np.array([right_triangle_right_corner, right_triangle_left_corner, right_triangle_lower_corner])
     cv2.drawContours(mask, [triangle_right, triangle_left], -1, 0, -1)
     return cv2.bitwise_and(output, output, mask=mask)
+
+
+def main():
+   
+
+    
+    data_path = Path('/mnt/windows_share/dicom_storage')
+    print('Available Cores: ' + str(cpu_count()-4))
+
+
+    p = data_path.glob('**/*')
+
+    # Get all Subfolders of data_path
+    subfolders = [e for e in data_path.iterdir() if e.is_dir()]
+    print("Subfolders: " + str(len(subfolders)))
+
+    # Check if there are any IDs remaining in folderliste
+    if len(subfolders)>0:
+        with Pool(cpu_count()-4) as pool:
+            res = pool.map(process_path, subfolders)
+            print(res)
+
+    # Print Done.  
+    return
+
+
 
 
 if __name__ == "__main__":
