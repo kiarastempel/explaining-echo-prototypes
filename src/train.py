@@ -26,12 +26,14 @@ from tensorflow import keras
 
 def main():
     args = utils.input_arguments.get_train_arguments()
-    if len(args.resolution) == 1:
+    if args.resolution and len(args.resolution) == 1:
         resolution = (args.resolution[0], args.resolution[0])
     elif args.resolution and len(args.resolution) == 2:
         resolution = args.resolution
-    else:
+    elif args.resolution and len(args.resolution) > 2:
         sys.exit('Argument --resolution takes one or two values')
+    else:
+        resolution = None
 
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
           Path(args.input_directory), args.dataset, args.model_name, args.experiment_name, args.augmentation,
