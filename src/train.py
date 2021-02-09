@@ -77,18 +77,20 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     output = 3 if target == 'all' else 1
 
     if model_name == 'resnet_18':
-        model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std, output)
+        model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std, output,
+                                          regularization)
     elif model_name == 'resnet_34':
-        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std, output)
+        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std, output,
+                                          regularization)
     elif model_name == 'resnet_50':
-        model = ThreeDConvolutionResNet50(width, height, number_input_frames, channels, mean, std, output)
+        model = ThreeDConvolutionResNet50(width, height, number_input_frames, channels, mean, std, output,
+                                          regularization)
     elif model_name == 'se-resnet_18':
-        model = ThreeDConvolutionSqueezeAndExciationResNet18(width, height, number_input_frames, channels, mean, std
-                                                             , output)
-    elif model_name == 'se-resnet_34':
-        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std, output)
+        model = ThreeDConvolutionSqueezeAndExciationResNet18(width, height, number_input_frames, channels, mean, std,
+                                                             output, regularization)
     else:
-        model = ThreeDConvolutionVGG(width, height, number_input_frames, channels, mean, std, output)
+        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std, output,
+                                          regularization)
 
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
@@ -96,11 +98,11 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     # benchmark(train_dataset)
     save_name = '_'.join([experiment_name, model_name, dataset, target])
     train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
-               save_name, regularization, load_checkpoint, mean_validation_dataset, target, dataset)
+               save_name, load_checkpoint, mean_validation_dataset, target, dataset)
 
 
 def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
-               save_name, regularization, load_checkpoint, mean_validation_dataset, target, dataset):
+               save_name, load_checkpoint, mean_validation_dataset, target, dataset):
     start_epoch = 0
     checkpoint = tf.train.Checkpoint(step_counter=tf.Variable(0), optimizer=optimizer, net=model,
                                      iterator=train_dataset)
@@ -135,7 +137,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     for epoch in range(start_epoch, epochs):
         # training
         for x_batch_train, y_batch_train in train_dataset:
-            train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics, regularization)
+            train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics)
 
         with file_writer_train.as_default():
             tf.summary.scalar('epoch_loss', data=train_mse_metric.result(), step=epoch)
@@ -203,12 +205,11 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
 
 @tf.function
-def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, metrics, regularization):
+def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, metrics):
     with tf.GradientTape() as tape:
         predictions = model(x_batch_train, training=True)
         loss_value = loss_fn(y_batch_train, predictions)
-        if regularization:
-            loss_value += sum(model.losses)
+        loss_value += sum(model.losses)
     grads = tape.gradient(loss_value, model.trainable_weights)
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
     for metric in metrics:

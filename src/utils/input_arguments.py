@@ -22,9 +22,7 @@ def get_train_arguments():
     parser.add_argument('--no-augmentation', dest='augmentation', action='store_false')
     parser.set_defaults(augmentation=True)
 
-    parser.add_argument('--regularization', dest='regularization', action='store_true')
-    parser.add_argument('--no-regularization', dest='regularization', action='store_false')
-    parser.set_defaults(regularization=True)
+    parser.add_argument('--regularization', default='l2', choices=['l1', 'l2', 'l1_l2'])
 
     parser.add_argument('--load_checkpoint', dest='load_checkpoint', action='store_true')
     parser.add_argument('--no-load_checkpoint', dest='load_checkpoint', action='store_false')

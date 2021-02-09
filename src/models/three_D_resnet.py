@@ -3,20 +3,20 @@ from models.custom_layers import ResidualBlock, ResidualBottleneckBlock, Residua
 
 
 class ThreeDConvolutionResNet18(keras.Model):
-    def __init__(self, width, height, frames, channels, mean, std, output=1):
+    def __init__(self, width, height, frames, channels, mean, std, output, regularization):
         super(ThreeDConvolutionResNet18, self).__init__()
         input_shape = (frames, width, height, channels)
         self.resnet = keras.Sequential([
             keras.layers.experimental.preprocessing.Rescaling(scale=1 / std, offset=-mean / std,
                                                               input_shape=input_shape),
             # fix resnet head
-            keras.layers.Conv3D(64, 7, 2, use_bias=False, kernel_regularizer=keras.regularizers.l2()),
+            keras.layers.Conv3D(64, 7, 2, use_bias=False, kernel_regularizer=regularization),
             keras.layers.BatchNormalization(),
             keras.layers.ReLU(),
             keras.layers.MaxPool3D(3, 2),
 
             # variable 2 layer blocks
-            ResidualBlock(64, 3),
+            ResidualBlock(64, 3, regularization),
             ResidualBlock(64, 3),
 
             ResidualConvBlock(128, 3, 2),
@@ -40,14 +40,14 @@ class ThreeDConvolutionResNet18(keras.Model):
 
 
 class ThreeDConvolutionResNet34(keras.Model):
-    def __init__(self, width, height, frames, channels, mean, std, output=1):
+    def __init__(self, width, height, frames, channels, mean, std, output, regularization):
         super(ThreeDConvolutionResNet34, self).__init__()
         input_shape = (frames, width, height, channels)
         self.resnet = keras.Sequential([
             keras.layers.experimental.preprocessing.Rescaling(scale=1 / std, offset=-mean / std,
                                                               input_shape=input_shape),
             # fix resnet head
-            keras.layers.Conv3D(64, 7, 2, use_bias=False, kernel_regularizer=keras.regularizers.l2()),
+            keras.layers.Conv3D(64, 7, 2, use_bias=False, kernel_regularizer=regularization),
             keras.layers.BatchNormalization(),
             keras.layers.ReLU(),
             keras.layers.MaxPool3D(3, 2),
@@ -85,14 +85,14 @@ class ThreeDConvolutionResNet34(keras.Model):
 
 
 class ThreeDConvolutionResNet50(keras.Model):
-    def __init__(self, width, height, frames, channels, mean, std, output=1):
+    def __init__(self, width, height, frames, channels, mean, std, output, regularization):
         super(ThreeDConvolutionResNet50, self).__init__()
         input_shape = (frames, width, height, channels)
         self.resnet = keras.Sequential([
             keras.layers.experimental.preprocessing.Rescaling(scale=1 / std, offset=-mean / std,
                                                               input_shape=input_shape),
             # fix resnet head
-            keras.layers.Conv3D(64, 7, 2, use_bias=False, kernel_regularizer=keras.regularizers.l2()),
+            keras.layers.Conv3D(64, 7, 2, use_bias=False, kernel_regularizer=regularization),
             keras.layers.BatchNormalization(),
             keras.layers.ReLU(),
             keras.layers.MaxPool3D(3, 2),
