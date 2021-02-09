@@ -4,8 +4,8 @@ from . import feature_descriptors
 import random
 
 
-def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, augment=False, dataset='stanford',
-                  target='ejection_fraction', full_video=False, resolution=(112, 112)):
+def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, resolution, augment=False, dataset='stanford',
+                  target='ejection_fraction', full_video=False, ):
 
     feature_descriptor = feature_descriptors.mainz_feature_description if dataset == 'mainz' \
         else feature_descriptors.stanford_feature_description

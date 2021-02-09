@@ -10,8 +10,8 @@ import utils.input_arguments
 from utils import choose_gpu
 from utils import subvideos
 
-# os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
-# print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
+os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
+print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet18
 from data_loader import tf_record_loader
@@ -60,19 +60,18 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         channels = metadata['channels']
 
     train_dataset = tf_record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
-                                                   number_input_frames, augment, dataset, target, resolution=resolution)
+                                                   number_input_frames, resolution, augment, dataset, target)
     validation_dataset = tf_record_loader.build_dataset(str(validation_record_file_name), batch_size,
-                                                        None, number_input_frames, False, dataset, target,
-                                                        resolution=resolution)
+                                                        None, number_input_frames, resolution, False, dataset, target)
     mean_validation_dataset = tf_record_loader.build_dataset(str(validation_record_file_name), 1, None,
-                                                             number_input_frames, False, dataset, target,
-                                                             full_video=True, resolution=resolution)
+                                                             number_input_frames, resolution, False, dataset, target,
+                                                             full_video=True)
 
     # for batch in train_dataset.take(1):
     # for i in range(number_input_frames):
     # plt.imshow(batch[0][0][i], cmap='gray')
     # plt.show()
-    output = 3 if target == 'all' else 1
+    output = 2 if target == 'all' else 1
 
     if model_name == 'resnet_18':
         model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std, output,
