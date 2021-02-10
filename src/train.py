@@ -1,18 +1,17 @@
-import sys
-
-from utils import choose_gpu
-import os
-from pathlib import Path
-import math
-import utils.input_arguments
-from utils import subvideos
 import json
-import time
+import math
+import os
 import random
+import sys
+import time
+from pathlib import Path
+
+import utils.input_arguments
+from utils import choose_gpu
+from utils import subvideos
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
 print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
-from models.three_D_vgg_net import ThreeDConvolutionVGG
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet18
 from data_loader import tf_record_loader
@@ -27,13 +26,14 @@ from tensorflow import keras
 
 def main():
     args = utils.input_arguments.get_train_arguments()
-
     if args.resolution and len(args.resolution) == 1:
         resolution = (args.resolution[0], args.resolution[0])
     elif args.resolution and len(args.resolution) == 2:
         resolution = args.resolution
-    else:
+    elif args.resolution and len(args.resolution) > 2:
         sys.exit('Argument --resolution takes one or two values')
+    else:
+        resolution = None
 
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
           Path(args.input_directory), args.dataset, args.model_name, args.experiment_name, args.augmentation,
@@ -59,36 +59,35 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         std = metadata['std']
         channels = metadata['channels']
 
-    if resolution[0] is None:
-        resolution = (width, height)
     train_dataset = tf_record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
-                                                   number_input_frames, augment, dataset, target, resolution=resolution)
+                                                   number_input_frames, resolution, augment, dataset, target)
     validation_dataset = tf_record_loader.build_dataset(str(validation_record_file_name), batch_size,
-                                                        None, number_input_frames, False, dataset, target,
-                                                        resolution=resolution)
+                                                        None, number_input_frames, resolution, False, dataset, target)
     mean_validation_dataset = tf_record_loader.build_dataset(str(validation_record_file_name), 1, None,
-                                                             number_input_frames, False, dataset, target,
-                                                             full_video=True, resolution=resolution)
+                                                             number_input_frames, resolution, False, dataset, target,
+                                                             full_video=True)
 
     # for batch in train_dataset.take(1):
     # for i in range(number_input_frames):
     # plt.imshow(batch[0][0][i], cmap='gray')
     # plt.show()
-    output = 3 if target == 'all' else 1
+    output = 2 if target == 'all' else 1
 
     if model_name == 'resnet_18':
-        model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std, output)
+        model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std, output,
+                                          regularization)
     elif model_name == 'resnet_34':
-        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std, output)
+        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std, output,
+                                          regularization)
     elif model_name == 'resnet_50':
-        model = ThreeDConvolutionResNet50(width, height, number_input_frames, channels, mean, std, output)
+        model = ThreeDConvolutionResNet50(width, height, number_input_frames, channels, mean, std, output,
+                                          regularization)
     elif model_name == 'se-resnet_18':
-        model = ThreeDConvolutionSqueezeAndExciationResNet18(width, height, number_input_frames, channels, mean, std
-                                                             , output)
-    elif model_name == 'se-resnet_34':
-        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std, output)
+        model = ThreeDConvolutionSqueezeAndExciationResNet18(width, height, number_input_frames, channels, mean, std,
+                                                             output, regularization)
     else:
-        model = ThreeDConvolutionVGG(width, height, number_input_frames, channels, mean, std, output)
+        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std, output,
+                                          regularization)
 
     optimizer = keras.optimizers.Adam(learning_rate)
     loss_fn = keras.losses.MeanSquaredError()
@@ -96,11 +95,11 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     # benchmark(train_dataset)
     save_name = '_'.join([experiment_name, model_name, dataset, target])
     train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
-               save_name, regularization, load_checkpoint, mean_validation_dataset, target, dataset)
+               save_name, load_checkpoint, mean_validation_dataset, target, dataset)
 
 
 def train_loop(model, train_dataset, validation_dataset, patience, epochs, optimizer, loss_fn, number_input_frames,
-               save_name, regularization, load_checkpoint, mean_validation_dataset, target, dataset):
+               save_name, load_checkpoint, mean_validation_dataset, target, dataset):
     start_epoch = 0
     checkpoint = tf.train.Checkpoint(step_counter=tf.Variable(0), optimizer=optimizer, net=model,
                                      iterator=train_dataset)
@@ -134,15 +133,15 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
     for epoch in range(start_epoch, epochs):
         # training
-        for x_batch_train, y_batch_train in train_dataset:
-            train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics, regularization)
+        for x_batch_train, y_batch_train in train_dataset.take(1):
+            train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics)
 
         with file_writer_train.as_default():
             tf.summary.scalar('epoch_loss', data=train_mse_metric.result(), step=epoch)
             tf.summary.scalar('epoch_mae', data=train_mae_metric.result(), step=epoch)
 
         # validation
-        for x_batch_val, y_batch_val in validation_dataset:
+        for x_batch_val, y_batch_val in validation_dataset.take(1):
             val_predictions = model(x_batch_val, training=False)
             validation_mse_metric.update_state(y_batch_val, val_predictions)
             validation_mae_metric.update_state(y_batch_val, val_predictions)
@@ -175,7 +174,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
     validation_mae_metric_distinct = keras.metrics.MeanAbsoluteError()
     validation_mae_metric_overlapping = keras.metrics.MeanAbsoluteError()
-    for x_batch_val, y_batch_val in mean_validation_dataset:
+    for x_batch_val, y_batch_val in mean_validation_dataset.take(5):
         distinct_splits = subvideos.get_distinct_splits(x_batch_val, number_input_frames)
         overlapping_splits = subvideos.get_overlapping_splits(x_batch_val, number_input_frames)
         validation_step(model, distinct_splits, y_batch_val, validation_mae_metric_distinct)
@@ -203,12 +202,11 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
 
 @tf.function
-def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, metrics, regularization):
+def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, metrics):
     with tf.GradientTape() as tape:
         predictions = model(x_batch_train, training=True)
         loss_value = loss_fn(y_batch_train, predictions)
-        if regularization:
-            loss_value += sum(model.losses)
+        loss_value += sum(model.losses)
     grads = tape.gradient(loss_value, model.trainable_weights)
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
     for metric in metrics:
