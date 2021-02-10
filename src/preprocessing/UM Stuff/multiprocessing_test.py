@@ -14,6 +14,7 @@ from tqdm import tqdm
 import pyodbc
 import shutil
 import sqlserverport
+import pandas
 
 from multiprocessing import Pool, cpu_count
 
@@ -47,49 +48,25 @@ class CHandleDatabase:
         #print("SQL DB closed")
         return
 
-    def get_campusID_old(self, subdirname):
-        self._cursor.execute('SELECT myoid FROM dbo.TableEchoMeasureStatus WHERE REPLACE(studyuid, \'.\',\'\') like \'%' + subdirname + '%\' and status=2')
-        row = self._cursor.fetchone()
-        if(row!=None):
-            myoid = row.myoid.strip()
-            self._cursor.execute('SELECT id FROM dbo.UUIDtoMYOID WHERE myoid=\''+myoid+'\' and done_converting=0')
-            uidrow = self._cursor.fetchone()
-            if(uidrow!=None):
-                return str(uidrow.id)
-            else:
-                #print("No CampusID found for: " + myoid)
-                return None
-        return None
-    
     def get_campusID(self, subdirname):
         self._cursor.execute('SELECT uud.id, uud.myoid, uud.done_converting FROM dbo.TableEchoMeasureStatus as stat left join dbo.UUIDtoMYOID as uud on stat.myoid=uud.myoid WHERE REPLACE(studyuid, \'.\',\'\') like \'%' + subdirname + '%\' and status=2 and done_converting=0')
         row = self._cursor.fetchone()
         if(row!=None):
             return str(row.id), row.myoid, row.done_converting
-       
-        #print("No CampusID found for: " + myoid)    
+
+        #print("No CampusID found for: " + myoid)
         return None, None, None
 
-
-    def get_campusID_old(self, subdirname):
-        self._cursor.execute('SELECT myoid FROM dbo.TableEchoMeasureStatus where REPLACE(studyuid, \'.\',\'\') like \'%' + subdirname + '%\' and status=2')
-        row = self._cursor.fetchone()
-        if(row!=None):
-            myoid = row.myoid.strip()
-            self._cursor.execute('SELECT id, done_converting FROM dbo.UUIDtoMYOID WHERE myoid=\''+myoid+'\' and done_converting=0')
-            uidrow = self._cursor.fetchone()
-            if(uidrow!=None):
-                return str(uidrow.id), myoid, uidrow.done_converting
-            else:
-                #print("No CampusID found for: " + myoid)
-                return None, myoid, None
-        return None, None, None
+    def get_folders_done(self):
+        sql='SELECT REPLACE(stat.[studyuid],\'.\',\'\') as done FROM dbo.TableEchoMeasureStatus as stat left join dbo.UUIDtoMYOID as uud on stat.myoid=uud.myoid WHERE status=2 and done_converting=1'
+        data = pandas.read_sql(sql,self.cnxn)
+        return data
 
     def setCampusIDDone(self, campusid):
         self._cursor.execute("UPDATE dbo.UUIDtoMYOID SET done_converting=1 WHERE id= ?",  campusid )
         self.cnxn.commit()
         return True
-    
+
     # Identify view according to results
     def getView(self, myoid, filename):
         self._cursor.execute('SELECT * FROM dbo.TableResultsConventional WHERE myoid = \'' + myoid + '\' and filename=\''+filename+'.dcm\'')
@@ -97,7 +74,7 @@ class CHandleDatabase:
         if(row!=None):
             return row.view
         else:
-            return None    
+            return None
 
 def process_path(echofolder):
     result_path = Path('/home/tro2s/echoconverter/processedBL')
@@ -126,36 +103,36 @@ def process_path(echofolder):
                     counter= counter + 1
                     make_video(video_path, destination_folder, campusid, view )
 
-                
+
             except:
                 DBHandler.close_connection()
                 print("Error: " + str(video_path))
 
 
-    ## If MYOID done set done 
+    ## If MYOID done set done
     if(counter<video_paths.__len__()):
         #shutil.rmtree(echofolder)
         DBHandler.setCampusIDDone(campusid)
-    
+
     DBHandler.close_connection()
     return True
 
 
 def make_video(file_to_process, destination_folder, campusid, view):
     file_name = campusid + "_" + view + "_" + file_to_process.stem
-    
+
     #print(f'Processing {file_name}')
-    
+
     video_filename = (destination_folder / file_name).with_suffix('.avi')
     dicom_filename = (destination_folder / file_name).with_suffix('.dcm')
 
     # Create Subdir
-    
+
 
     if not (Path(video_filename).is_file() and Path(dicom_filename).is_file()):
         dicom_file = dicom.dcmread(file_to_process)
         pixel_array = dicom_file.pixel_array
- 
+
         if(len(pixel_array.shape)==4):
             frames, height, width, channels = pixel_array.shape
         else:
@@ -233,9 +210,9 @@ def mask_image(output):
 
 
 def main():
-   
 
-    
+    DBHandler = CHandleDatabase()
+
     data_path = Path('/mnt/windows_share/dicom_storage')
     print('Available Cores: ' + str(cpu_count()-4))
 
@@ -245,14 +222,18 @@ def main():
     # Get all Subfolders of data_path
     subfolders = [e for e in data_path.iterdir() if e.is_dir()]
     print("Subfolders: " + str(len(subfolders)))
+    df=DBHandler.get_folders_done()
+    df = df[~df['done'].isin(subfolders)]
+    todo = df.values.tolist()
 
+    print("Todo: " + str(len(todo)))
     # Check if there are any IDs remaining in folderliste
     if len(subfolders)>0:
         with Pool(cpu_count()-4) as pool:
             res = pool.map(process_path, subfolders)
             print(res)
 
-    # Print Done.  
+    # Print Done.
     return
 
 
