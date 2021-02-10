@@ -196,8 +196,8 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     with file_writer_validation.as_default():
         tf.summary.scalar('epoch_mae_overlapping', data=validation_mae_metric_overlapping.result(), step=epochs)
         tf.summary.scalar('epoch_mae_distinct', data=validation_mae_metric_distinct.result(), step=epochs)
-        tf.summary.image('Regression Plot', scatter_plot_distinct, step=0)
-        tf.summary.image('Regression Plot', scatter_plot_overlapping, step=0)
+        tf.summary.image('Regression Plot Distinct', scatter_plot_distinct, step=0)
+        tf.summary.image('Regression Plot Overlapping', scatter_plot_overlapping, step=0)
 
     # visualization
     predictions = []
