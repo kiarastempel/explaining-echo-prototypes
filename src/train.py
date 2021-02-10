@@ -133,7 +133,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
     for epoch in range(start_epoch, epochs):
         # training
-        for x_batch_train, y_batch_train in train_dataset.take(1):
+        for x_batch_train, y_batch_train in train_dataset:
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics)
 
         with file_writer_train.as_default():
@@ -141,7 +141,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             tf.summary.scalar('epoch_mae', data=train_mae_metric.result(), step=epoch)
 
         # validation
-        for x_batch_val, y_batch_val in validation_dataset.take(1):
+        for x_batch_val, y_batch_val in validation_dataset:
             val_predictions = model(x_batch_val, training=False)
             validation_mse_metric.update_state(y_batch_val, val_predictions)
             validation_mae_metric.update_state(y_batch_val, val_predictions)
@@ -178,7 +178,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     predictions_distinct = []
     predictions_overlapping = []
     true_values = []
-    for x_batch_val, y_batch_val in mean_validation_dataset.take(5):
+    for x_batch_val, y_batch_val in mean_validation_dataset:
         true_values.append(y_batch_val)
         distinct_splits = subvideos.get_distinct_splits(x_batch_val, number_input_frames)
         overlapping_splits = subvideos.get_overlapping_splits(x_batch_val, number_input_frames)
