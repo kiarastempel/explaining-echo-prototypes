@@ -10,8 +10,8 @@ import utils.input_arguments
 from utils import choose_gpu
 from utils import subvideos
 
-os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
-print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
+# os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
+# print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet18
 from data_loader import tf_record_loader
@@ -133,7 +133,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
     for epoch in range(start_epoch, epochs):
         # training
-        for x_batch_train, y_batch_train in train_dataset:
+        for x_batch_train, y_batch_train in train_dataset.take(1):
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics)
 
         with file_writer_train.as_default():
@@ -141,7 +141,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             tf.summary.scalar('epoch_mae', data=train_mae_metric.result(), step=epoch)
 
         # validation
-        for x_batch_val, y_batch_val in validation_dataset:
+        for x_batch_val, y_batch_val in validation_dataset.take(1):
             val_predictions = model(x_batch_val, training=False)
             validation_mse_metric.update_state(y_batch_val, val_predictions)
             validation_mae_metric.update_state(y_batch_val, val_predictions)
@@ -174,7 +174,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
     validation_mae_metric_distinct = keras.metrics.MeanAbsoluteError()
     validation_mae_metric_overlapping = keras.metrics.MeanAbsoluteError()
-    for x_batch_val, y_batch_val in mean_validation_dataset:
+    for x_batch_val, y_batch_val in mean_validation_dataset.take(5):
         distinct_splits = subvideos.get_distinct_splits(x_batch_val, number_input_frames)
         overlapping_splits = subvideos.get_overlapping_splits(x_batch_val, number_input_frames)
         validation_step(model, distinct_splits, y_batch_val, validation_mae_metric_distinct)

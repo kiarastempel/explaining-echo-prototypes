@@ -21,7 +21,7 @@ class ResidualBlock(keras.layers.Layer):
         super(ResidualBlock, self).__init__(**kwargs)
         self.resnet_block = keras.Sequential(
             [
-                CustomConv3D(kernel_number, kernel_size, 1, padding='same', use_bn=True),
+                CustomConv3D(kernel_number, kernel_size, regularization, 1, padding='same', use_bn=True),
                 keras.layers.Conv3D(kernel_number, kernel_size, padding='same', use_bias=False,
                                     kernel_regularizer=regularization),
                 keras.layers.BatchNormalization()
