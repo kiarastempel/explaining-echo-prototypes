@@ -171,7 +171,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
                 optimizer.lr.assign(optimizer.lr.read_value() / 2)
             if early_stopping_counter > patience:
                 break
-
+    print(f'{best_loss=}')
     validation_mae_metric_distinct = keras.metrics.MeanAbsoluteError()
     validation_mae_metric_overlapping = keras.metrics.MeanAbsoluteError()
     # visualization
