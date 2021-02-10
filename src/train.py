@@ -174,6 +174,11 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     print(f'{best_loss=}')
     validation_mae_metric_distinct = keras.metrics.MeanAbsoluteError()
     validation_mae_metric_overlapping = keras.metrics.MeanAbsoluteError()
+    validation_mse_metric_distinct = keras.metrics.MeanSquaredError()
+    validation_mse_metric_overlapping = keras.metrics.MeanSquaredError()
+    distinct_metrics = [validation_mae_metric_distinct, validation_mse_metric_distinct]
+    overlapping_metrics = [validation_mse_metric_distinct, validation_mse_metric_overlapping]
+
     # visualization
     predictions_distinct = []
     predictions_overlapping = []
@@ -182,9 +187,9 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
         true_values.append(y_batch_val)
         distinct_splits = subvideos.get_distinct_splits(x_batch_val, number_input_frames)
         overlapping_splits = subvideos.get_overlapping_splits(x_batch_val, number_input_frames)
-        mean_prediction_distinct = validation_step(model, distinct_splits, y_batch_val, validation_mae_metric_distinct)
+        mean_prediction_distinct = validation_step(model, distinct_splits, y_batch_val, distinct_metrics)
         mean_prediction_overlapping = validation_step(model, overlapping_splits, y_batch_val,
-                                                      validation_mae_metric_overlapping)
+                                                      overlapping_metrics)
         predictions_distinct.append(tf.squeeze(mean_prediction_distinct))
         predictions_overlapping.append(tf.squeeze(mean_prediction_overlapping))
     predictions_distinct = tf.concat(predictions_distinct, 0)
@@ -196,6 +201,8 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     with file_writer_validation.as_default():
         tf.summary.scalar('epoch_mae_overlapping', data=validation_mae_metric_overlapping.result(), step=epochs)
         tf.summary.scalar('epoch_mae_distinct', data=validation_mae_metric_distinct.result(), step=epochs)
+        tf.summary.scalar('epoch_mse_overlapping', data=validation_mse_metric_overlapping.result(), step=epochs)
+        tf.summary.scalar('epoch_mse_distinct', data=validation_mse_metric_distinct.result(), step=epochs)
         tf.summary.image('Regression Plot Distinct', scatter_plot_distinct, step=0)
         tf.summary.image('Regression Plot Overlapping', scatter_plot_overlapping, step=0)
 
@@ -230,10 +237,11 @@ def train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, metrics)
 
 
 @tf.function(experimental_relax_shapes=True)
-def validation_step(model, x_validation, y_validation, validation_metric):
+def validation_step(model, x_validation, y_validation, metrics):
     predictions = model(x_validation, training=False)
     mean_prediction = tf.reduce_mean(predictions, keepdims=True)
-    validation_metric.update_state(y_validation, mean_prediction)
+    for metric in metrics:
+        metric.update_state(y_validation, mean_prediction)
     return mean_prediction
 
 
