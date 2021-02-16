@@ -34,7 +34,7 @@ class CHandleDatabase:
 
 def main():
     
-    data_path = "/mnt/c/Users/tro0s/Desktop/PreprocessedBL-2020-01-04/"
+    data_path = "/mnt/c/Users/tro0s/Desktop/processedBL/done/"
     result_path = "/mnt/c/Users/tro0s/Desktop/PreprocessedBLFinal/"
 
     ## Initialise DB class
