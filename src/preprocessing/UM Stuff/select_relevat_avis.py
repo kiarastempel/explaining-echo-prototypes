@@ -45,8 +45,9 @@ def main():
 
     for row in tqdm(files):
         fullname =  row[0] + '_a4c_' +row[1]
+        if os.path.isfile(result_path+fullname)==False:
         #os.system('copy ' + data_path + fullname + " "+result_path+fullname)
-        shutil.copyfile(data_path + fullname, result_path+fullname)
+            shutil.copyfile(data_path + fullname, result_path+fullname)
 
 
 
