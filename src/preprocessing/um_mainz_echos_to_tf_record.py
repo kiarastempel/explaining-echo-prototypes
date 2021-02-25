@@ -109,23 +109,23 @@ def create_tf_record(input_directory, output_file, samples, needed_frames=50):
             end = start + chunk_size
             if index + 1 == file_limit:
                 end = len(samples)
-            for file_name, ejection_fraction, e_e_prime, quality in zip(samples.FileName[start: end],
+            for file_name, ejection_fraction, e_e_prime, grade in zip(samples.FileName[start: end],
                                                                         samples.manualEF[start: end],
                                                                         samples.E_E_prime_ratio[start:end],
                                                                         samples.grade[start:end]):
                 video = echo_base.load_video(input_directory / 'Videos' / file_name, needed_frames)
                 if video is not None:
                     number_used_videos += 1
-                    writer.write(serialise_example(video, ejection_fraction, e_e_prime, quality))
+                    writer.write(serialise_example(video, ejection_fraction, e_e_prime, grade))
     return number_used_videos
 
 
-def serialise_example(video, ejection_fraction, e_e_prime, quality):
+def serialise_example(video, ejection_fraction, e_e_prime, grade):
     feature = {
         'frames': echo_base.bytes_list_feature(video),
         'ejection_fraction': echo_base.float_feature(ejection_fraction),
         'e_e_prime': echo_base.float_feature(e_e_prime),
-        'quality': echo_base.int64_feature(quality),
+        'grade': echo_base.int64_feature(int(grade)),
         'number_of_frames': echo_base.int64_feature(len(video))
     }
     example_proto = tf.train.Example(features=tf.train.Features(feature=feature))
