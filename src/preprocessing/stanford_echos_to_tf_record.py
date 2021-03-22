@@ -62,12 +62,12 @@ def generate_tf_record(input_directory, output_directory, metadata_filename, sta
                                                needed_frames)
 
     print('Create test record.')
-    number_of_test_samples = create_tf_record(input_path, test_folder / 'test_{}.tfrecord.gzip', validation_samples,
+    number_of_test_samples = create_tf_record(input_path, test_folder / 'test_{}.tfrecord.gzip', test_samples,
                                               needed_frames)
 
     print('Create validation record.')
     number_of_validation_samples = create_tf_record(input_path, validation_folder / 'validation_{}.tfrecord.gzip',
-                                                    test_samples, needed_frames)
+                                                    validation_samples, needed_frames)
 
     metadata_file_path = output_path / 'metadata.json'
     if not metadata_file_path.is_file():
