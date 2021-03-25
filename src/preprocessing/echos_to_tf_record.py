@@ -47,7 +47,7 @@ def load_video(file_name, needed_frames):
         frame_position = int(i * fps_relative)
         video.set(cv2.CAP_PROP_POS_FRAMES, frame_position-1)
         ret, frame = video.read()
-        if frame.shape is not None and frame.shape[2] > 1:
+        if frame is not None and frame.shape[2] > 1:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         frame_list.append(cv2.imencode('.jpeg', frame)[1].tostring())
     video.release()
