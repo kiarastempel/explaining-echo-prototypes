@@ -28,7 +28,7 @@ def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, 
         ds = ds.map(lambda video, y, number_of_frames: first_frames(video, y, number_of_input_frames),
                     num_parallel_calls=AUTOTUNE)
     else:
-        ds = ds.map(lambda video, y, number_of_frames: (video, y))
+        ds = ds.map(lambda video, y, number_of_frames: (tf.squeeze(video), y))
     ds = ds.batch(batch_size=batch_size, drop_remainder=True)
     return ds.prefetch(AUTOTUNE)
 
@@ -60,6 +60,7 @@ def augment_example(example, y, number_of_frames, number_of_input_frames):
 
 @tf.autograph.experimental.do_not_convert
 def first_frames(video, target, number_input_frames):
+    video = tf.squeeze(video)
     return video[0: number_input_frames], target
 
 

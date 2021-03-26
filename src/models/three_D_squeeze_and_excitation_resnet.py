@@ -8,7 +8,7 @@ class ThreeDConvolutionSqueezeAndExciationResNet18(keras.Model):
         super(ThreeDConvolutionSqueezeAndExciationResNet18, self).__init__()
         input_shape = (frames, width, height, channels)
         self.resnet = keras.Sequential([
-            #keras.layers.InputLayer(input_shape=input_shape, dtype=tf.float32),
+            keras.layers.InputLayer(input_shape=input_shape, dtype=tf.float32),
             keras.layers.experimental.preprocessing.Rescaling(scale=1 / std, offset=-mean / std),
             # fix resnet head
             keras.layers.Conv3D(64, 7, 2, use_bias=False, kernel_regularizer=regularization),

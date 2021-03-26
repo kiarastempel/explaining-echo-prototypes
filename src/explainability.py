@@ -15,52 +15,53 @@ def calculate_integrated_gradients(number_input_frames, dataset, model_path, inp
     tf.random.set_seed(random_seed)
     data_folder = Path(input_directory)
     test_record_file_names = data_folder / 'test' / 'test_*.tfrecord.gzip'
-
-    model = keras.models.load_model(model_path)
-    # inputs = keras.Input(shape=(50, 112, 112, 1), dtype=tf.float32)
-    # outputs = model_(inputs)
-    # model = tf.keras.Model(inputs=inputs, outputs=outputs)
     test_dataset = tf_record_loader.build_dataset(str(test_record_file_names), batch_size,
                                                   None, number_input_frames, resolution,
                                                   False, dataset, target, False)
     one_batch_dataset = test_dataset.take(1)
     samples = np.concatenate([x for x, y in one_batch_dataset], axis=0)
 
-    predictions = model.predict(samples)
-    integrated_gradients_algorithm = IntegratedGradients(model, layer=None, method="gausslegendre", n_steps=5,
-                                                         internal_batch_size=1)
-    explanation = integrated_gradients_algorithm.explain(samples, baselines=None, target=None)
+    # subclassing model in tensorflow breaks some features, so we have to define input and output explicit
+    model_ = keras.models.load_model(model_path)
+    inputs = keras.Input(shape=(number_input_frames, samples.shape[2], samples.shape[3]), dtype=tf.float32)
+    outputs = model_(inputs)
+    model = tf.keras.Model(inputs=inputs, outputs=outputs)
+
+    predictions = model.predict(one_batch_dataset)
+    integrated_gradients_algorithm = IntegratedGradients(model, layer=None, method="gausslegendre", n_steps=50,
+                                                         internal_batch_size=16)
+    explanation = integrated_gradients_algorithm.explain(samples, baselines=None, target=predictions)
     attributions = explanation.attributions
 
-    fig, ax = plt.subplots(nrows=3, ncols=4, figsize=(10, 7))
     cmap_bound = np.abs(attributions).max()
+    for video_pos, video in enumerate(attributions[0]):
+        for row in range(len(video)):
+            fig, ax = plt.subplots(nrows=1, ncols=4, figsize=(112, 112))
+            # original images
+            ax[0].imshow(samples[video_pos][row].squeeze(), cmap='gray')
 
-    for row in range(len(samples)):
-        # original images
+            # attributions
+            attr = video[row]
+            im = ax[1].imshow(attr.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
 
-        ax[row, 0].imshow(samples[row][0].squeeze(), cmap='gray')
-        ax[row, 0].set_title(f'Prediction: {predictions[row]}')
+            # positive attributions
+            attr_pos = attr.clip(0, 1)
+            im_pos = ax[2].imshow(attr_pos.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
 
-        # attributions
-        attr = attributions[row]
-        im = ax[row, 1].imshow(attr.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
+            # negative attributions
+            attr_neg = attr.clip(-1, 0)
+            im_neg = ax[3].imshow(attr_neg.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
 
-        # positive attributions
-        attr_pos = attr.clip(0, 1)
-        im_pos = ax[row, 2].imshow(attr_pos.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
+            ax[0].set_title(f'Prediction: {predictions[video_pos]}')
+            ax[1].set_title('Attributions')
+            ax[2].set_title('Positive attributions')
+            ax[3].set_title('Negative attributions')
 
-        # negative attributions
-        attr_neg = attr.clip(-1, 0)
-        im_neg = ax[row, 3].imshow(attr_neg.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
+            for ax in fig.axes:
+                ax.axis('off')
 
-    ax[0, 1].set_title('Attributions')
-    ax[0, 2].set_title('Positive attributions')
-    ax[0, 3].set_title('Negative attributions')
-
-    for ax in fig.axes:
-        ax.axis('off')
-
-    fig.colorbar(im, cax=fig.add_axes([0.95, 0.25, 0.03, 0.5]))
+            fig.colorbar(im, cax=fig.add_axes([0.93, 0.25, 0.03, 0.6]))
+            plt.show()
 
 
 if __name__ == "__main__":
