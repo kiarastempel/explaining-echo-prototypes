@@ -39,5 +39,6 @@ def get_test_arguments():
     parser.add_argument('--dataset', default='stanford', choices=['stanford', 'mainz'])
     parser.add_argument('-t', '--target', default='ejection_fraction', choices=['ejection_fraction', 'e_e_prime', 'gls',
                                                                                 'quality'])
+    parser.add_argument('--resolution', nargs='+', metavar=('height', 'width'), type=int)
     parser.add_argument('--model_path', required=True)
     return parser.parse_args()

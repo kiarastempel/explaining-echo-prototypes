@@ -5,17 +5,13 @@ import random
 import sys
 import time
 from pathlib import Path
+from utils import choose_gpu, visualise, subvideos, input_arguments
 
-import utils.input_arguments
-from utils import choose_gpu
-from utils import subvideos
-
-os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
-print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
+#os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
+#print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet18
 from data_loader import tf_record_loader
-from visualisation import visualise
 import tensorflow as tf
 from tensorflow import keras
 
@@ -25,7 +21,7 @@ from tensorflow import keras
 
 
 def main():
-    args = utils.input_arguments.get_train_arguments()
+    args = input_arguments.get_train_arguments()
     if args.resolution and len(args.resolution) == 1:
         resolution = (args.resolution[0], args.resolution[0])
     elif args.resolution and len(args.resolution) == 2:
@@ -133,7 +129,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
 
     for epoch in range(start_epoch, epochs):
         # training
-        for x_batch_train, y_batch_train in train_dataset:
+        for x_batch_train, y_batch_train in train_dataset.take(3):
             train_step(model, x_batch_train, y_batch_train, loss_fn, optimizer, train_metrics)
 
         with file_writer_train.as_default():
@@ -141,7 +137,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
             tf.summary.scalar('epoch_mae', data=train_mae_metric.result(), step=epoch)
 
         # validation
-        for x_batch_val, y_batch_val in validation_dataset:
+        for x_batch_val, y_batch_val in validation_dataset.take(1):
             val_predictions = model(x_batch_val, training=False)
             validation_mse_metric.update_state(y_batch_val, val_predictions)
             validation_mae_metric.update_state(y_batch_val, val_predictions)
@@ -171,7 +167,8 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
                 optimizer.lr.assign(optimizer.lr.read_value() / 2)
             if early_stopping_counter > patience:
                 break
-    print(f'{best_loss=}')
+
+    print(f'Best Loss: {best_loss}')
     validation_mae_metric_distinct = keras.metrics.MeanAbsoluteError()
     validation_mae_metric_overlapping = keras.metrics.MeanAbsoluteError()
     validation_mse_metric_distinct = keras.metrics.MeanSquaredError()
@@ -183,7 +180,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     predictions_distinct = []
     predictions_overlapping = []
     true_values = []
-    for x_batch_val, y_batch_val in mean_validation_dataset:
+    for x_batch_val, y_batch_val in mean_validation_dataset.take(2):
         true_values.append(y_batch_val)
         distinct_splits = subvideos.get_distinct_splits(x_batch_val, number_input_frames)
         overlapping_splits = subvideos.get_overlapping_splits(x_batch_val, number_input_frames)
@@ -210,7 +207,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     predictions = []
     true_values = []
     model.load_weights(str(save_path))
-    for x_batch_val, y_batch_val in validation_dataset:
+    for x_batch_val, y_batch_val in validation_dataset.take(2):
         prediction = model(x_batch_val, training=False)
         predictions.append(tf.squeeze(prediction))
         true_values.append(y_batch_val)

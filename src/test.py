@@ -3,25 +3,25 @@ import tensorflow as tf
 from tensorflow import keras
 import utils.input_arguments
 from data_loader import tf_record_loader
-from visualisation import visualise
-from utils import subvideos
+from utils import subvideos, visualise
 
 
 def main():
     args = utils.input_arguments.get_test_arguments()
-    test(args.number_input_frames, args.dataset, args.model_path, args.input_directory, args.target, args.batch_size)
+    test(args.number_input_frames, args.dataset, args.model_path, args.input_directory, args.target, args.batch_size,
+         args.resolution)
 
 
-def test(number_input_frames, dataset, model_path, input_directory, target, batch_size):
+def test(number_input_frames, dataset, model_path, input_directory, target, batch_size, resolution):
     data_folder = Path(input_directory)
     test_record_file_names = data_folder / 'test' / 'test_*.tfrecord.gzip'
 
     model = keras.models.load_model(model_path)
 
     test_dataset = tf_record_loader.build_dataset(str(test_record_file_names), batch_size, None, number_input_frames,
-                                                  False, dataset, target, False)
+                                                  resolution, False, dataset, target, False)
     mean_test_dataset = tf_record_loader.build_dataset(str(test_record_file_names), 1, None,
-                                                       number_input_frames, False, dataset, target,
+                                                       number_input_frames, resolution, False, dataset, target,
                                                        full_video=True)
 
     test_mse_metric = keras.metrics.MeanSquaredError()
@@ -29,8 +29,8 @@ def test(number_input_frames, dataset, model_path, input_directory, target, batc
 
     # test
     for x_batch_val, y_batch_val in test_dataset:
-        test_step(model, first_frames, y_batch_val, test_mse_metric)
-        test_step(model, first_frames, y_batch_val, test_mae_metric)
+        test_step(model, x_batch_val, y_batch_val, test_mse_metric)
+        test_step(model, x_batch_val, y_batch_val, test_mae_metric)
 
     validation_mae_metric_distinct = keras.metrics.MeanAbsoluteError()
     validation_mae_metric_overlapping = keras.metrics.MeanAbsoluteError()
