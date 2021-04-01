@@ -17,16 +17,22 @@ def main():
     parser.add_argument('-m', '--metadata_filename', default='FileList.csv', help="Name of the metadata file.")
     parser.add_argument('--needed_frames', default=50, type=int, help="Number of minimum frames required for an echo "
                                                                       "to be considered.")
+    parser.add_argument('--shuffle', dest='shuffle',
+                        action='store_true')
+    parser.add_argument('--no-shuffle', dest='shuffle',
+                        action='store_false')
+    parser.set_defaults(regularization=True)
     args = parser.parse_args()
 
     if args.output_directory is None:
         args.output_directory = args.input_directory
+    print(args.shuffle)
 
     generate_tf_record(args.input_directory, args.output_directory, args.metadata_filename,
-                       args.standardization_size, args.needed_frames)
+                       args.standardization_size, args.needed_frames, args.shuffle)
 
 
-def generate_tf_record(input_directory, output_directory, metadata_filename, standardisation_sample, needed_frames):
+def generate_tf_record(input_directory, output_directory, metadata_filename, standardisation_sample, needed_frames, shuffle=True):
     tf.random.set_seed(5)
     np.random.seed(5)
 
@@ -37,9 +43,10 @@ def generate_tf_record(input_directory, output_directory, metadata_filename, sta
     validation_samples = file_list_data_frame[file_list_data_frame.Split == 'VAL'][['FileName', 'EF']]
     test_samples = file_list_data_frame[file_list_data_frame.Split == 'TEST'][['FileName', 'EF']]
 
-    train_samples = train_samples.sample(frac=1)
-    test_samples = test_samples.sample(frac=1)
-    validation_samples = validation_samples.sample(frac=1)
+    if shuffle:
+        train_samples = train_samples.sample(frac=1)
+        test_samples = test_samples.sample(frac=1)
+        validation_samples = validation_samples.sample(frac=1)
 
     if output_directory is None:
         output_directory = input_directory
@@ -55,19 +62,19 @@ def generate_tf_record(input_directory, output_directory, metadata_filename, sta
     train_folder.mkdir(exist_ok=True)
     validation_folder.mkdir(exist_ok=True)
 
-    height, width  = echo_base.extract_metadata(train_samples.FileName[1], input_path)
+    height, width = echo_base.extract_metadata(train_samples.FileName[1], input_path)
 
     print('Create train record.')
     number_of_train_samples = create_tf_record(input_path, train_folder / 'train_{}.tfrecord.gzip', train_samples,
                                                needed_frames)
 
     print('Create test record.')
-    number_of_test_samples = create_tf_record(input_path, test_folder / 'test_{}.tfrecord.gzip', validation_samples,
+    number_of_test_samples = create_tf_record(input_path, test_folder / 'test_{}.tfrecord.gzip', test_samples,
                                               needed_frames)
 
     print('Create validation record.')
     number_of_validation_samples = create_tf_record(input_path, validation_folder / 'validation_{}.tfrecord.gzip',
-                                                    test_samples, needed_frames)
+                                                    validation_samples, needed_frames)
 
     metadata_file_path = output_path / 'metadata.json'
     if not metadata_file_path.is_file():
