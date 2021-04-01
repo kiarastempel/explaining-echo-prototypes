@@ -1,19 +1,24 @@
 import tensorflow as tf
-import vidaug.augmentors as va
+#import vidaug.augmentors as va
 from . import feature_descriptors
 import random
 
 
-def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, resolution, augment=False, dataset='stanford',
-                  target='ejection_fraction', full_video=False, ):
+def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, augment=False, dataset='stanford',
+                  target='ejection_fraction', full_video=False, resolution=(112, 112)):
 
     feature_descriptor = feature_descriptors.mainz_feature_description if dataset == 'mainz' \
         else feature_descriptors.stanford_feature_description
 
     AUTOTUNE = tf.data.experimental.AUTOTUNE
-    ds = tf.data.Dataset.list_files(file_names)
-    ds = ds.interleave(lambda files: tf.data.TFRecordDataset(files, compression_type='GZIP'), cycle_length=AUTOTUNE,
-                       num_parallel_calls=AUTOTUNE)
+    if shuffle_size is not None:
+        ds = tf.data.Dataset.list_files(file_names)
+        ds = ds.interleave(lambda files: tf.data.TFRecordDataset(files, compression_type='GZIP'),
+                           cycle_length=AUTOTUNE, num_parallel_calls=AUTOTUNE)
+    else:
+        ds = tf.data.Dataset.list_files(file_names, shuffle=False)
+        ds = ds.interleave(lambda files: tf.data.TFRecordDataset(files, compression_type='GZIP'),
+                           cycle_length=1, num_parallel_calls=AUTOTUNE)
     ds = ds.map(lambda x: parse_example(x, feature_descriptor, target, resolution), num_parallel_calls=AUTOTUNE)
     ds = ds.filter(lambda video, y, number_of_frames: number_of_frames >= number_of_input_frames)
     ds = ds.map(lambda video, y, number_of_frames: (video, y))
@@ -32,11 +37,10 @@ def parse_example(example, feature_descriptor, target, resolution):
     raw_frames = tf.sparse.to_dense(parsed_example['frames'])
     number_of_frames = parsed_example['number_of_frames']
     frames = tf.map_fn(tf.io.decode_jpeg, raw_frames, fn_output_signature=tf.uint8)
-    if resolution is not None:
-        frames = tf.image.resize_with_pad(frames, resolution[0], resolution[1])
-        frames = tf.cast(frames, tf.float32)
+    resized_images = tf.image.resize_with_pad(frames, resolution[0], resolution[1])
+    resized_images = tf.cast(resized_images, tf.float32)
     y = parsed_example['ejection_fraction', 'e_e_prime', ] if target == 'all' else parsed_example[target]
-    return frames,  y, number_of_frames
+    return resized_images,  y, number_of_frames
 
 
 def augment_example(example, y, number_of_input_frames):
