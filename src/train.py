@@ -11,6 +11,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = str(choose_gpu.pick_gpu_lowest_memory())
 print("GPU:", str(choose_gpu.pick_gpu_lowest_memory()), 'will be used.')
 from models.three_D_resnet import ThreeDConvolutionResNet18, ThreeDConvolutionResNet34, ThreeDConvolutionResNet50
 from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet18
+from models.three_D_squeeze_and_excitation_resnet import ThreeDConvolutionSqueezeAndExciationResNet34
 from data_loader import tf_record_loader
 import tensorflow as tf
 from tensorflow import keras
