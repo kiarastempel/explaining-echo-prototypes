@@ -174,7 +174,7 @@ def train_loop(model, train_dataset, validation_dataset, patience, epochs, optim
     validation_mse_metric_distinct = keras.metrics.MeanSquaredError()
     validation_mse_metric_overlapping = keras.metrics.MeanSquaredError()
     distinct_metrics = [validation_mae_metric_distinct, validation_mse_metric_distinct]
-    overlapping_metrics = [validation_mse_metric_distinct, validation_mse_metric_overlapping]
+    overlapping_metrics = [validation_mae_metric_distinct, validation_mse_metric_overlapping]
 
     # visualization
     predictions_distinct = []
