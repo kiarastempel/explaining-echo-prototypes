@@ -15,4 +15,5 @@ def create_scatter_plot(x, y, target, dataset):
     plt.savefig(plot_buf, format='png')
     plot_buf.seek(0)
     image = tf.image.decode_png(plot_buf.getvalue(), channels=4)
+    plt.clf()
     return tf.expand_dims(image, 0)
