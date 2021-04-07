@@ -6,6 +6,7 @@ import numpy as np
 from utils import input_arguments
 from data_loader import tf_record_loader
 from alibi.explainers import IntegratedGradients
+from alibi.utils.visualization import visualize_image_attr
 import matplotlib.pyplot as plt
 
 
@@ -28,40 +29,24 @@ def calculate_integrated_gradients(number_input_frames, dataset, model_path, inp
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
 
     predictions = model.predict(one_batch_dataset)
-    integrated_gradients_algorithm = IntegratedGradients(model, layer=None, method="gausslegendre", n_steps=50,
+    baseline = np.ones_like(samples[0])
+    baseline *= 255
+    integrated_gradients_algorithm = IntegratedGradients(model, layer=None, method="gausslegendre", n_steps=5,
                                                          internal_batch_size=16)
     explanation = integrated_gradients_algorithm.explain(samples, baselines=None, target=predictions)
     attributions = explanation.attributions
 
-    cmap_bound = np.abs(attributions).max()
     for video_pos, video in enumerate(attributions[0]):
         for row in range(len(video)):
-            fig, ax = plt.subplots(nrows=1, ncols=4, figsize=(112, 112))
-            # original images
-            ax[0].imshow(samples[video_pos][row].squeeze(), cmap='gray')
-
-            # attributions
             attr = video[row]
-            im = ax[1].imshow(attr.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
+            original_image = samples[video_pos][row]
+            fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
+            visualize_image_attr(attr=None, original_image=original_image, method='original_image',
+                                 title='Original Image', plt_fig_axis=(fig, ax[0]), use_pyplot=False)
 
-            # positive attributions
-            attr_pos = attr.clip(0, 1)
-            im_pos = ax[2].imshow(attr_pos.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
-
-            # negative attributions
-            attr_neg = attr.clip(-1, 0)
-            im_neg = ax[3].imshow(attr_neg.squeeze(), vmin=-cmap_bound, vmax=cmap_bound, cmap='PiYG')
-
-            ax[0].set_title(f'Prediction: {predictions[video_pos]}')
-            ax[1].set_title('Attributions')
-            ax[2].set_title('Positive attributions')
-            ax[3].set_title('Negative attributions')
-
-            for ax in fig.axes:
-                ax.axis('off')
-
-            fig.colorbar(im, cax=fig.add_axes([0.93, 0.25, 0.03, 0.6]))
-            plt.show()
+            visualize_image_attr(attr=attr.squeeze(), original_image=original_image, method='blended_heat_map',
+                                 sign='all', show_colorbar=True, title='Overlaid Attributions',
+                                 plt_fig_axis=(fig, ax[1]), use_pyplot=True)
 
 
 if __name__ == "__main__":
