@@ -29,24 +29,27 @@ def calculate_integrated_gradients(number_input_frames, dataset, model_path, inp
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
 
     predictions = model.predict(one_batch_dataset)
-    baseline = np.ones_like(samples[0])
-    baseline *= 255
-    integrated_gradients_algorithm = IntegratedGradients(model, layer=None, method="gausslegendre", n_steps=5,
-                                                         internal_batch_size=16)
-    explanation = integrated_gradients_algorithm.explain(samples, baselines=None, target=predictions)
-    attributions = explanation.attributions
+    attributions = []
+    for i in range(2):
+        baselines = np.random.random_sample(samples.shape)
+        integrated_gradients_algorithm = IntegratedGradients(model, layer=None, method="gausslegendre", n_steps=50,
+                                                             internal_batch_size=16)
+        explanation = integrated_gradients_algorithm.explain(samples, baselines=baselines, target=predictions)
+        attributions.append(explanation.attributions)
 
-    for video_pos, video in enumerate(attributions[0]):
-        for row in range(len(video)):
-            attr = video[row]
+    mean_attributions = np.mean(attributions, axis=0)
+    mean_attributions = mean_attributions.squeeze(axis=0)
+    for video_pos, video in enumerate(mean_attributions[0]):
+        for row in range(1):
+            attr = np.moveaxis(video, 0, -1)
             original_image = samples[video_pos][row]
-            fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
-            visualize_image_attr(attr=None, original_image=original_image, method='original_image',
-                                 title='Original Image', plt_fig_axis=(fig, ax[0]), use_pyplot=False)
-
-            visualize_image_attr(attr=attr.squeeze(), original_image=original_image, method='blended_heat_map',
+            original_image = original_image[:, :, None]
+            fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(100, 50))
+            ax[0].imshow(original_image.squeeze(), cmap='gray')
+            ax[0].set_title('Original Image')
+            visualize_image_attr(attr=attr, original_image=original_image, method='blended_heat_map',
                                  sign='all', show_colorbar=True, title='Overlaid Attributions',
-                                 plt_fig_axis=(fig, ax[1]), use_pyplot=True)
+                                 plt_fig_axis=(fig, ax[1]), use_pyplot=True, cmap='viridis', alpha_overlay=0.5)
 
 
 if __name__ == "__main__":
