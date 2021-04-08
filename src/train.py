@@ -71,22 +71,22 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
     output = 2 if target == 'all' else 1
 
     if model_name == 'resnet_18':
-        model = ThreeDConvolutionResNet18(width, height, number_input_frames, channels, mean, std, output,
+        model = ThreeDConvolutionResNet18(resolution[0], resolution[1], number_input_frames, channels, mean, std, output,
                                           regularization)
     elif model_name == 'resnet_34':
-        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std, output,
+        model = ThreeDConvolutionResNet34(resolution[0], resolution[1], number_input_frames, channels, mean, std, output,
                                           regularization)
     elif model_name == 'resnet_50':
-        model = ThreeDConvolutionResNet50(width, height, number_input_frames, channels, mean, std, output,
+        model = ThreeDConvolutionResNet50(resolution[0], resolution[1], number_input_frames, channels, mean, std, output,
                                           regularization)
     elif model_name == 'se-resnet_18':
-        model = ThreeDConvolutionSqueezeAndExciationResNet18(width, height, number_input_frames, channels, mean, std,
+        model = ThreeDConvolutionSqueezeAndExciationResNet18(resolution[0], resolution[1], number_input_frames, channels, mean, std,
                                                              output, regularization)
     elif model_name == 'se-resnet_34':
-        model = ThreeDConvolutionSqueezeAndExciationResNet34(width, height, number_input_frames, channels, mean, std,
+        model = ThreeDConvolutionSqueezeAndExciationResNet34(resolution[0], resolution[1], number_input_frames, channels, mean, std,
                                                              output, regularization)
     else:
-        model = ThreeDConvolutionResNet34(width, height, number_input_frames, channels, mean, std, output,
+        model = ThreeDConvolutionResNet34(resolution[0], resolution[1], number_input_frames, channels, mean, std, output,
                                           regularization)
 
     optimizer = keras.optimizers.Adam(learning_rate)

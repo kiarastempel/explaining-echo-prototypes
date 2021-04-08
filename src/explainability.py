@@ -8,6 +8,8 @@ from data_loader import tf_record_loader
 from alibi.explainers import IntegratedGradients
 from alibi.utils.visualization import visualize_image_attr
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from numpy.random import default_rng
 
 
 def calculate_integrated_gradients(number_input_frames, dataset, model_path, input_directory, target, batch_size,
@@ -30,26 +32,36 @@ def calculate_integrated_gradients(number_input_frames, dataset, model_path, inp
 
     predictions = model.predict(one_batch_dataset)
     attributions = []
-    for i in range(2):
-        baselines = np.random.random_sample(samples.shape)
-        integrated_gradients_algorithm = IntegratedGradients(model, layer=None, method="gausslegendre", n_steps=50,
+    rng = default_rng(5)
+    for i in range(1):
+        baselines = rng.integers(low=0, high=255, size=samples.shape)
+        integrated_gradients_algorithm = IntegratedGradients(model, layer=None, method="gausslegendre", n_steps=5,
                                                              internal_batch_size=16)
         explanation = integrated_gradients_algorithm.explain(samples, baselines=baselines, target=predictions)
         attributions.append(explanation.attributions)
 
     mean_attributions = np.mean(attributions, axis=0)
     mean_attributions = mean_attributions.squeeze(axis=0)
-    for video_pos, video in enumerate(mean_attributions[0]):
-        for row in range(1):
-            attr = np.moveaxis(video, 0, -1)
-            original_image = samples[video_pos][row]
-            original_image = original_image[:, :, None]
-            fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(100, 50))
-            ax[0].imshow(original_image.squeeze(), cmap='gray')
-            ax[0].set_title('Original Image')
-            visualize_image_attr(attr=attr, original_image=original_image, method='blended_heat_map',
-                                 sign='all', show_colorbar=True, title='Overlaid Attributions',
-                                 plt_fig_axis=(fig, ax[1]), use_pyplot=True, cmap='viridis', alpha_overlay=0.5)
+    for video_pos, video in enumerate(mean_attributions):
+        attr = np.moveaxis(video, 0, -1)
+        original_image = samples[video_pos][0]
+        original_image = original_image[:, :, None]
+        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(100, 50))
+        ax[0].imshow(original_image.squeeze(), cmap='gray')
+        ax[0].set_title('Original Image')
+        visualize_image_attr(attr=attr, original_image=original_image, method='blended_heat_map',
+                             sign='all', show_colorbar=True, title='Overlaid Attributions',
+                             plt_fig_axis=(fig, ax[1]), use_pyplot=True, cmap='viridis')
+
+        fig = plt.figure()
+        frames = []
+        for i in range(video):
+            frames.append([plt.imshow(video[i], cmap='viridis', animated=True)])
+
+        ani = animation.ArtistAnimation(fig, frames, interval=50, blit=True,
+                                        repeat_delay=1000)
+        # ani.save('movie.mp4')
+        plt.show()
 
 
 if __name__ == "__main__":
