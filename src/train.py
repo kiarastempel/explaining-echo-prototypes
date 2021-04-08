@@ -34,11 +34,11 @@ def main():
 
     train(args.batch_size, args.shuffle_size, args.epochs, args.patience, args.learning_rate, args.number_input_frames,
           Path(args.input_directory), args.dataset, args.model_name, args.experiment_name, args.augmentation,
-          args.regularization, args.target, args.load_checkpoint, resolution)
+          args.regularization, args.target, args.load_checkpoint, resolution, args.cache)
 
 
 def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_input_frames, input_directory, dataset,
-          model_name, experiment_name, augment, regularization, target, load_checkpoint, resolution):
+          model_name, experiment_name, augment, regularization, target, load_checkpoint, resolution, cache):
     # set random seeds for reproducibility
     tf.random.set_seed(5)
     random.seed(5)
@@ -57,12 +57,13 @@ def train(batch_size, shuffle_size, epochs, patience, learning_rate, number_inpu
         channels = metadata['channels']
 
     train_dataset = tf_record_loader.build_dataset(str(train_record_file_name), batch_size, shuffle_size,
-                                                   number_input_frames, resolution, augment, dataset, target)
+                                                   number_input_frames, resolution, augment, dataset, target, cache)
     validation_dataset = tf_record_loader.build_dataset(str(validation_record_file_name), batch_size,
-                                                        None, number_input_frames, resolution, False, dataset, target)
+                                                        None, number_input_frames, resolution, False, dataset, target,
+                                                        cache)
     mean_validation_dataset = tf_record_loader.build_dataset(str(validation_record_file_name), 1, None,
                                                              number_input_frames, resolution, False, dataset, target,
-                                                             full_video=True)
+                                                             cache, full_video=True)
 
     # for batch in train_dataset.take(1):
     # for i in range(number_input_frames):

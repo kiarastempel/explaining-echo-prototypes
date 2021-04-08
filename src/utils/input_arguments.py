@@ -26,8 +26,10 @@ def get_train_arguments():
     parser.add_argument('--regularization', default='l2', choices=['l1', 'l2', 'l1_l2'])
 
     parser.add_argument('--load_checkpoint', dest='load_checkpoint', action='store_true')
-    parser.add_argument('--no-load_checkpoint', dest='load_checkpoint', action='store_false')
     parser.set_defaults(load_checkpoint=False)
+
+    parser.add_argument('--cache', dest='cache', action='store_true')
+    parser.set_defaults(cache=False)
 
     return parser.parse_args()
 

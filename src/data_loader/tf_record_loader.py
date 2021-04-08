@@ -5,9 +5,7 @@ import random
 
 
 def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, resolution, augment=False,
-                  dataset='stanford',
-                  target='ejection_fraction',
-                  full_video=False):
+                  dataset='stanford', target='ejection_fraction', cache=False, full_video=False):
 
     feature_descriptor = feature_descriptors.mainz_feature_description if dataset == 'mainz' \
         else feature_descriptors.stanford_feature_description
@@ -18,6 +16,8 @@ def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, 
                        num_parallel_calls=AUTOTUNE)
     ds = ds.map(lambda x: parse_example(x, feature_descriptor, target, resolution), num_parallel_calls=AUTOTUNE)
     ds = ds.filter(lambda video, y, number_of_frames: number_of_frames >= number_of_input_frames)
+    if cache:
+        ds = ds.cache()
     if shuffle_size is not None:
         ds = ds.shuffle(shuffle_size, reshuffle_each_iteration=True)
     if augment:
@@ -71,8 +71,8 @@ def augmentation(videos):
     seq = va.Sequential([
         # rotation is very slow
         rare(va.RandomRotate(degrees=10)),
-        va.RandomTranslate(10, 10),
-        sometimes(va.Multiply(brightness_factor))
+        sometimes(va.RandomTranslate(10, 10)),
+        rare(va.Multiply(brightness_factor))
     ])
     augmented_video = []
     for video in videos:
