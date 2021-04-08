@@ -33,9 +33,9 @@ def calculate_integrated_gradients(number_input_frames, dataset, model_path, inp
     predictions = model.predict(one_batch_dataset)
     attributions = []
     rng = default_rng(5)
-    for i in range(1):
+    for i in range(5):
         baselines = rng.integers(low=0, high=255, size=samples.shape)
-        integrated_gradients_algorithm = IntegratedGradients(model, layer=None, method="gausslegendre", n_steps=5,
+        integrated_gradients_algorithm = IntegratedGradients(model, layer=None, method="gausslegendre", n_steps=50,
                                                              internal_batch_size=16)
         explanation = integrated_gradients_algorithm.explain(samples, baselines=baselines, target=predictions)
         attributions.append(explanation.attributions)
@@ -55,10 +55,12 @@ def calculate_integrated_gradients(number_input_frames, dataset, model_path, inp
 
         fig = plt.figure()
         frames = []
-        for i in range(video):
-            frames.append([plt.imshow(video[i], cmap='viridis', animated=True)])
+        mini = np.min(video)
+        maxi = np.max(video)
+        for frame in video:
+            frames.append([plt.imshow(frame, cmap='viridis', vmin=mini, vmax=maxi, animated=True)])
 
-        ani = animation.ArtistAnimation(fig, frames, interval=50, blit=True,
+        ani = animation.ArtistAnimation(fig, frames, interval=100, blit=True,
                                         repeat_delay=1000)
         # ani.save('movie.mp4')
         plt.show()
