@@ -8,7 +8,7 @@ import numpy as np
 def create_scatter_plot(x, y, target, dataset):
     sns.set_style('darkgrid')
     sns.scatterplot(x=x, y=y)
-    maximum = np.max(np.max(x), np.max(y))
+    maximum = np.max([np.max(x), np.max(y)])
     plt.plot([0, maximum], [0, maximum], 'black', lw=1)
     plt.xlabel('Manual measured values')
     plt.ylabel('Automatic predicted values')
