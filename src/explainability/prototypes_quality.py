@@ -1,7 +1,6 @@
 import argparse
 import json
 import numpy as np
-import matplotlib.pyplot as plt
 from pathlib import Path
 from tensorflow import keras
 from sklearn.metrics.pairwise import cosine_similarity
@@ -114,11 +113,11 @@ def evaluate_prototypes(ef_cluster_centers, ef_cluster_borders,
                         prototypes, predicting_model, extractor,
                         output_directory, similarity_measures,
                         compare_videos, data='train')
-    calculate_distances(test_dataset, number_input_frames,
-                        ef_cluster_centers, ef_cluster_borders,
-                        prototypes, predicting_model, extractor,
-                        output_directory, similarity_measures,
-                        compare_videos, data='test')
+    # calculate_distances(test_dataset, number_input_frames,
+    #                     ef_cluster_centers, ef_cluster_borders,
+    #                     prototypes, predicting_model, extractor,
+    #                     output_directory, similarity_measures,
+    #                     compare_videos, data='test')
 
 
 def calculate_distances(dataset, number_input_frames, ef_cluster_centers,
@@ -186,6 +185,9 @@ def calculate_distances(dataset, number_input_frames, ef_cluster_centers,
         # COSINE SIMILARITY
         prototype, prototype_index = get_most_similar_prototype_cosine(
             prototypes[ef_cluster_index], video, features=True)
+        # print("Considered file:", y)
+        # print("File of closest prototype:", prototype.file_name)
+        # print("EF prototype: ", prototype.ef)
         ef_prototype[similarity_measures[1]].append(prototype.ef)
         diff_ef = abs(prototype.ef - ef)
         diffs_ef[similarity_measures[1]].append(diff_ef)

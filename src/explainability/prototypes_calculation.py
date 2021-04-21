@@ -106,7 +106,7 @@ def get_kmedoids_prototype_videos(num_ef_clusters, video_clusters_directory,
                                   metadata_filename, train_dataset,
                                   number_input_frames):
     """
-    Calculate prototypes of video clustering created by kmediods, where a
+    Calculate prototypes of video clustering created by kmedoids, where a
     prototype is defined as the medoid of a video cluster (i.e. it is a video).
     @param num_ef_clusters: number of clusters produced while clustering by EF
     @param video_clusters_directory: directory containing video cluster labels
@@ -118,7 +118,34 @@ def get_kmedoids_prototype_videos(num_ef_clusters, video_clusters_directory,
     """
     # here prototypes correspond to cluster centers of video clusters
     prototypes = {}
+    # means and std regarding ef
+    ef_cluster_sizes = []
+    ef_cluster_means = []
+    ef_cluster_stds = []
+    video_cluster_sizes = []
+    video_cluster_means = []
+    video_cluster_stds = []
     for i in range(num_ef_clusters):
+        # get labels of video_clustering
+        cluster_labels, actual_efs, file_names = rh.read_cluster_labels(
+            Path(video_clusters_directory,
+                 'cluster_labels_video_' + str(i) + '.txt'))
+        num_video_clusters = max(cluster_labels) + 1
+        ef_cluster_sizes.append(len(cluster_labels))
+        ef_cluster_means.append(np.mean(actual_efs))
+        ef_cluster_stds.append(np.std(actual_efs))
+        video_cluster_sizes = [[] for j in range(num_video_clusters)]
+        video_cluster_means = [[] for j in range(num_video_clusters)]
+        video_cluster_stds = [[] for j in range(num_video_clusters)]
+        for j in range(num_video_clusters):
+            videos_in_cluster = [k for k in range(len(cluster_labels))
+                                 if cluster_labels[k] == j]
+            efs_cluster = []
+            for v in videos_in_cluster:
+                efs_cluster.append(actual_efs[v])
+            video_cluster_sizes[j].append(len(videos_in_cluster))
+            video_cluster_means[j].append(np.mean(efs_cluster))
+            video_cluster_stds[j].append(np.std(efs_cluster))
         # read prototypes of ith ef-cluster: list of Video-Instances
         prototypes[i] = rh.read_video_cluster_centers(
             Path(video_clusters_directory,
@@ -126,7 +153,7 @@ def get_kmedoids_prototype_videos(num_ef_clusters, video_clusters_directory,
     # get original videos of prototypes:
     prototypes = get_videos_of_prototypes(prototypes, metadata_filename,
                                           train_dataset, number_input_frames)
-    return prototypes
+    return prototypes, ef_cluster_sizes, ef_cluster_means, ef_cluster_stds, video_cluster_sizes, video_cluster_means, video_cluster_stds
 
 
 def get_kmeans_prototype_features(num_ef_clusters, video_clusters_directory):
