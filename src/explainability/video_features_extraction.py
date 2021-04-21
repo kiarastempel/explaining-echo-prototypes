@@ -13,6 +13,8 @@ def main():
     parser.add_argument('-o', '--output_directory',
                         help="Directory to save the video features in")
     parser.add_argument('-f', '--number_input_frames', default=50, type=int)
+    # parser.add_argument('-r', '--resolution', nargs='+', metavar=('height', 'width'),
+    #                     type=int)
     parser.add_argument('-cl', '--ef_clusters_file',
                         default='../../data/clustering_ef/cluster_labels_ef.txt',
                         help='Path to file containing ef cluster labels')
@@ -36,12 +38,14 @@ def main():
         file_names=str(train_record_file_names),
         batch_size=1,
         shuffle_size=None,
-        number_of_input_frames=args.number_input_frames)
+        number_of_input_frames=args.number_input_frames,
+        resolution=None)
     validation_dataset = tf_record_loader.build_dataset(
         file_names=str(validation_record_file_names),
         batch_size=1,
         shuffle_size=None,
-        number_of_input_frames=args.number_input_frames)
+        number_of_input_frames=args.number_input_frames,
+        resolution=None)
     train_dataset = train_dataset.concatenate(validation_dataset)
 
     extract_features(args.model_path, args.hidden_layer_index,
@@ -91,7 +95,7 @@ def get_hidden_layer_features(model, train_dataset, cluster_labels,
     for video, y in train_dataset:
         if cluster_labels[i] == ef_cluster_index:
             # print(i, ": ", y)
-            first_frames = video[:, :number_input_frames, :, :, :]
+            first_frames = video[:, :number_input_frames, :, :]
             features = extractor(first_frames)
             extracted_features.append(features)
             ef.append(y[0])

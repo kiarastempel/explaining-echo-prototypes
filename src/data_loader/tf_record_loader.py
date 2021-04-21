@@ -4,7 +4,6 @@ from . import feature_descriptors
 import random
 
 
-
 def build_dataset(file_names, batch_size, shuffle_size, number_of_input_frames, resolution, augment=False,
                   dataset='stanford', target='ejection_fraction', cache=False, full_video=False):
 

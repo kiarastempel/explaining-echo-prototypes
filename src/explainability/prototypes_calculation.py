@@ -41,12 +41,14 @@ def main():
         file_names=str(train_record_file_names),
         batch_size=1,
         shuffle_size=None,
-        number_of_input_frames=args.number_input_frames)
+        number_of_input_frames=args.number_input_frames,
+        resolution=None)
     validation_dataset = tf_record_loader.build_dataset(
         file_names=str(validation_record_file_names),
         batch_size=1,
         shuffle_size=None,
-        number_of_input_frames=args.number_input_frames)
+        number_of_input_frames=args.number_input_frames,
+        resolution=None)
     train_dataset = train_dataset.concatenate(validation_dataset)
 
     calculate_prototypes(args.video_features_directory,
@@ -74,7 +76,7 @@ def calculate_prototypes(video_features_directory, video_clusters_directory,
                                                    video_clusters_directory,
                                                    metadata_filename,
                                                    train_dataset,
-                                                   number_input_frames)
+                                                   number_input_frames)[0]
     elif method == 'kmeans_features' or method == 'cipa_features':
         prototypes = get_kmeans_prototype_features(num_ef_clusters,
                                                    video_clusters_directory)
@@ -276,7 +278,7 @@ def get_videos_of_prototypes(prototypes, metadata_filename, train_dataset,
     for video, y in train_dataset:
         if k == all_indices[i]:
             prototypes[indices[k][0]][indices[k][1]].video = \
-                video[:, :number_input_frames, :, :, :].numpy().flatten()
+                video[:, :number_input_frames, :, :].numpy().flatten()
             i += 1
             if i >= len(all_indices):
                 break

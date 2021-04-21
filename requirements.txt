@@ -1,7 +1,7 @@
 tensorflow~=2.4.1
 pyodbc~=4.0.30
 opencv-python
-numpy~=1.20.1
+numpy
 pydicom~=2.1.2
 Pillow~=8.1.2
 tqdm~=4.59.0
