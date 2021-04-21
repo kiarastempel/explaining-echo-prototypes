@@ -2,6 +2,8 @@ import argparse
 from pathlib import Path
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler, Normalizer
+from sklearn.decomposition import PCA
+import numpy as np
 import read_helpers as rh
 import clustering as cl
 
@@ -33,7 +35,8 @@ def main():
 
 
 def cluster_by_videos(ef_clusters_file, video_features_directory,
-                      output_directory, standardize=True, normalize=False):
+                      output_directory, standardize=True, normalize=False,
+                      pca=True):
     # get data of ef clustering
     ef_cluster_labels, actual_efs, file_names = rh.read_cluster_labels(ef_clusters_file)
 
@@ -51,6 +54,7 @@ def cluster_by_videos(ef_clusters_file, video_features_directory,
         all_extracted_features.extend(extracted_features)
         extracted_features_per_cluster.append(extracted_features)
         print("Videos features of ef-cluster", i, "read")
+    original_extracted_features_per_cluster = extracted_features_per_cluster
 
     # normalize/standardize features
     if normalize:
@@ -61,6 +65,20 @@ def cluster_by_videos(ef_clusters_file, video_features_directory,
         extracted_features_per_cluster = transform(
             StandardScaler(), all_extracted_features,
             extracted_features_per_cluster)
+    # dimensionality reduction
+    if pca:
+        for i in range(num_ef_clusters):
+            file_path = Path(video_features_directory,
+                             'extracted_video_features_' + str(i) + '.txt')
+            extracted_features = rh.read_extracted_features(file_path)
+            all_extracted_features.extend(extracted_features)
+            extracted_features_per_cluster.append(extracted_features)
+
+        pca = PCA(n_components=3)
+        extracted_features_per_cluster = transform(
+            pca, all_extracted_features, extracted_features_per_cluster)
+        explained_variance = pca.explained_variance_ratio_
+        print("##", explained_variance)
 
     # cluster videos in each ef-cluster using extracted features
     for i in range(num_ef_clusters):
@@ -97,7 +115,7 @@ def cluster_by_videos(ef_clusters_file, video_features_directory,
                 txt_file.write(str(j) + " "
                                + str(actual_efs[videos_in_cluster[cluster_centers_indices[j]]]) + " "
                                + str(file_names[videos_in_cluster[cluster_centers_indices[j]]]) + " "
-                               + str(extracted_features_per_cluster[i][cluster_centers_indices[j]]) + "\n")
+                               + str(np.array(original_extracted_features_per_cluster[i][cluster_centers_indices[j]])) + "\n")
         print("Clustering of ef-cluster", i, "finished", "\n")
 
 
