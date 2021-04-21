@@ -11,5 +11,5 @@ mainz_feature_description = {
     'ejection_fraction': tf.io.FixedLenFeature((), tf.float32),
     'number_of_frames': tf.io.FixedLenFeature((), tf.int64),
     'e_e_prime': tf.io.FixedLenFeature((), tf.float32),
-    'quality': tf.io.FixedLenFeature((), tf.int64)
+    'grade': tf.io.FixedLenFeature((), tf.int64)
 }

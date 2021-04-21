@@ -1,4 +1,5 @@
 from tensorflow import keras
+import tensorflow as tf
 from models.custom_layers import SqueezeAndExcitationResidualBlock, SqueezeExcitationResidualConvBlock
 
 
@@ -7,10 +8,10 @@ class ThreeDConvolutionSqueezeAndExciationResNet18(keras.Model):
         super(ThreeDConvolutionSqueezeAndExciationResNet18, self).__init__()
         input_shape = (frames, width, height, channels)
         self.resnet = keras.Sequential([
-            keras.layers.experimental.preprocessing.Rescaling(scale=1 / std, offset=-mean / std,
-                                                              input_shape=input_shape),
+            keras.layers.InputLayer(input_shape=input_shape, dtype=tf.float32),
+            keras.layers.experimental.preprocessing.Rescaling(scale=1 / std, offset=-mean / std),
             # fix resnet head
-            keras.layers.Conv3D(64, 7, 2, use_bias=False, kernel_regularizer=keras.regularizers.l2()),
+            keras.layers.Conv3D(64, 7, 2, use_bias=False, kernel_regularizer=regularization),
             keras.layers.BatchNormalization(),
             keras.layers.ReLU(),
             keras.layers.MaxPool3D(3, 2),
@@ -39,15 +40,16 @@ class ThreeDConvolutionSqueezeAndExciationResNet18(keras.Model):
         return self.resnet(inputs)
 
 
-class ThreeDConvolutionResNet34(keras.Model):
+class ThreeDConvolutionSqueezeAndExciationResNet34(keras.Model):
     def __init__(self, width, height, frames, channels, mean, std, output , regularization):
-        super(ThreeDConvolutionResNet34, self).__init__()
+        super(ThreeDConvolutionSqueezeAndExciationResNet34, self).__init__()
         input_shape = (frames, width, height, channels)
         self.resnet = keras.Sequential([
             keras.layers.experimental.preprocessing.Rescaling(scale=1 / std, offset=-mean / std,
                                                               input_shape=input_shape),
             # fix resnet head
-            keras.layers.Conv3D(64, 7, 2, use_bias=False, kernel_regularizer=keras.regularizers.l2()),
+            keras.layers.InputLayer(input_shape=input_shape, dtype=tf.float32),
+            keras.layers.Conv3D(64, 7, 2, use_bias=False, kernel_regularizer=regularization),
             keras.layers.BatchNormalization(),
             keras.layers.ReLU(),
             keras.layers.MaxPool3D(3, 2),

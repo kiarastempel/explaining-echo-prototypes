@@ -7,7 +7,7 @@ def get_distinct_splits(video, number_of_frames):
     for i in range(number_of_subvideos):
         start = i * number_of_frames
         end = start + number_of_frames
-        subvideos.append(video[:, start: end:, :, :, :])
+        subvideos.append(video[:, start: end:, :, :])
     return tf.concat(subvideos, 0)
 
 
@@ -19,9 +19,5 @@ def get_overlapping_splits(video, number_of_frames):
     for i in range(number_of_subvideos):
         start = i * half_number_of_frames
         end = start + number_of_frames
-        subvideos.append(video[:, start: end:, :, :, :])
+        subvideos.append(video[:, start: end:, :, :])
     return tf.concat(subvideos, 0)
-
-
-def get_first_frames(video, number_of_frames):
-    return video[:, :number_of_frames, :, :, :]
