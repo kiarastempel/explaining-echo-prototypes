@@ -26,7 +26,7 @@ def main():
                         help='Directory with the still images.')
     parser.add_argument('-o', '--output_directory',
                         help='Directory to save the model in.')
-    parser.add_argument('-end', '--ending_out',
+    parser.add_argument('-end', '--ending_out', default='',
                         help='Individual ending of output folder names')
     parser.add_argument('-fv', '--frame_volumes_filename', default='FrameVolumes.csv',
                         help='Name of the file containing frame volumes.')

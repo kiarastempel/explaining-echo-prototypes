@@ -1,14 +1,14 @@
 import argparse
 import json
 import numpy as np
+import explainability.read_helpers as rh
 from pathlib import Path
 from tensorflow import keras
 from sklearn.metrics.pairwise import cosine_similarity
 from skimage.metrics import structural_similarity, peak_signal_noise_ratio
 from data_loader import tf_record_loader
-import read_helpers as rh
-from prototypes_calculation import get_videos_of_prototypes
-from clustering_ef import get_ef_cluster_centers_indices
+from explainability.prototypes_calculation import get_videos_of_prototypes
+from explainability.clustering_ef import get_ef_cluster_centers_indices
 
 
 def main():
@@ -18,7 +18,7 @@ def main():
     parser.add_argument('-o', '--output_directory',
                         help="Directory to save prototypes and evaluations in")
     parser.add_argument('-p', '--prototypes_filename', default='prototypes.txt',
-                        help='Name of file to save prototypes in')
+                        help='Name of file containing prototypes')
     parser.add_argument('-cc', '--ef_cluster_centers_file',
                         default='../../data/clustering_ef/cluster_centers_ef.txt',
                         help='Path to file containing ef cluster labels')
@@ -35,9 +35,10 @@ def main():
     parser.add_argument('-l', '--hidden_layer_index', default=14, type=int)
     args = parser.parse_args()
 
-    output_directory = Path(args.output_directory)
-    if output_directory is None:
+    if args.output_directory is None:
         output_directory = Path(args.input_directory, 'results')
+    else:
+        output_directory = Path(args.output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
 
     # load test dataset
@@ -74,7 +75,7 @@ def main():
     prototypes = rh.read_prototypes(
         Path(output_directory, args.prototypes_filename))
 
-    # validate clustering -> by validating prototype
+    # validate clustering -> by validating prototypes
     evaluate_prototypes(ef_cluster_centers, ef_cluster_borders,
                         prototypes, train_dataset,
                         test_dataset, args.metadata_filename, args.model_path,
@@ -96,13 +97,13 @@ def evaluate_prototypes(ef_cluster_centers, ef_cluster_borders,
 
     # load model
     print("Start loading model")
+    print(model_path)
     model = keras.models.load_model(model_path)
     print("End loading model")
     predicting_model = keras.Model(inputs=model.get_layer(index=0).input,
-                                   outputs=model.layers[0].layers[15].output)
+                                   outputs=model.layers[0].layers[hidden_layer_index + 1].output)
     extractor = keras.Model(inputs=model.get_layer(index=0).input,
-                            outputs=model.layers[0].layers[
-                                hidden_layer_index].output)
+                            outputs=model.layers[0].layers[hidden_layer_index].output)
     if compare_videos:
         prototypes = get_videos_of_prototypes(prototypes, metadata_filename, train_dataset, number_input_frames)
 
