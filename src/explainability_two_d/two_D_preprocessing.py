@@ -2,6 +2,7 @@ from pathlib import Path
 from PIL import Image
 import cv2
 import pandas as pd
+import tensorflow as tf
 import random
 import os
 import argparse
@@ -27,6 +28,9 @@ def main():
     output_directory.mkdir(parents=True, exist_ok=True)
     metadata_path = Path(args.input_directory, args.metadata_filename)
     volumes_path = Path(args.input_directory, args.volumes_filename)
+
+    tf.random.set_seed(5)
+    random.seed(5)
 
     volume_tracings_data_frame = get_volume_tracings(metadata_path, volumes_path, output_directory)
     create_still_images(volume_tracings_data_frame, avi_directory, output_directory)
