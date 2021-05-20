@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from tensorflow import keras
 import matplotlib.pyplot as plt
-import read_helpers as rh
+import explainability.read_helpers as rh
 from data_loader import tf_record_loader
 
 
@@ -28,9 +28,10 @@ def main():
                         help='Directory with video cluster labels')
     args = parser.parse_args()
 
-    output_directory = Path(args.output_directory)
-    if output_directory is None:
+    if args.output_directory is None:
         output_directory = Path(args.input_directory, 'results')
+    else:
+        output_directory = Path(args.output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
 
     # load train/validation dataset
@@ -106,7 +107,7 @@ def calculate_prototypes(video_features_directory, video_clusters_directory,
 
 def get_kmedoids_prototype_videos(num_ef_clusters, video_clusters_directory,
                                   metadata_filename, train_dataset,
-                                  number_input_frames):
+                                  number_input_frames, get_videos=True):
     """
     Calculate prototypes of video clustering created by kmedoids, where a
     prototype is defined as the medoid of a video cluster (i.e. it is a video).
@@ -115,6 +116,7 @@ def get_kmedoids_prototype_videos(num_ef_clusters, video_clusters_directory,
     @param metadata_filename: name of file containing metadata
     @param train_dataset: dataset used for training/calculating clusters
     @param number_input_frames: number of video frames
+    @param get_videos: True if orginal videos should be returned besides features
     @return: Returns map of prototypes, mapping from ef-cluster-index to a list
     of prototypes (one for each video-cluster belonging to that ef-cluster)
     """
@@ -153,8 +155,9 @@ def get_kmedoids_prototype_videos(num_ef_clusters, video_clusters_directory,
             Path(video_clusters_directory,
                  'cluster_centers_video_' + str(i) + '.txt'))
     # get original videos of prototypes:
-    prototypes = get_videos_of_prototypes(prototypes, metadata_filename,
-                                          train_dataset, number_input_frames)
+    if get_videos:
+        prototypes = get_videos_of_prototypes(prototypes, metadata_filename,
+                                              train_dataset, number_input_frames)
     return prototypes, ef_cluster_sizes, ef_cluster_means, ef_cluster_stds, video_cluster_sizes, video_cluster_means, video_cluster_stds
 
 
