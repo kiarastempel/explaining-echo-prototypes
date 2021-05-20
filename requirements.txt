@@ -17,5 +17,5 @@ jenkspy~=0.2.0
 pathlib~=1.0.1
 alibi~=0.5.7
 
--e git+https://github.com/qubvel/classification_models.git
+-e git+https://github.com/qubvel/classification_models#egg=classification_models
 torchvision~=0.9.1
