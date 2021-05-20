@@ -27,7 +27,7 @@ def k_means(data, n_clusters):
 def kde(data, bw_method):
     data = np.array(data)
     bandwidth = select_bandwidth(data, bw=bw_method, kernel=None)
-    kde = KernelDensity(kernel='gaussian', bandwidth=bandwidth).fit(data)
+    kde = KernelDensity(kernel='gaussian', bandwidth=2).fit(data)
     s = np.linspace(0, 100)
     e = kde.score_samples(s.reshape(-1, 1))
 

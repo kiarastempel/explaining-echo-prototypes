@@ -15,6 +15,7 @@ def read_cluster_labels(cluster_file):
         for line in txt_file:
             line_split = line.split(" ")
             cluster_labels.append(int(line_split[0]))
+
             efs.append(float(line_split[1]))
             file_names.append(line_split[2].rsplit()[0])
     return cluster_labels, efs, file_names

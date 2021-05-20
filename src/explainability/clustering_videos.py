@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler, Normalizer
 from sklearn.decomposition import PCA
 import numpy as np
-import read_helpers as rh
-import clustering as cl
+import explainability.read_helpers as rh
+import explainability.clustering as cl
 
 
 def main():
@@ -24,21 +24,26 @@ def main():
     parser.add_argument('-model_path', required=True)
     args = parser.parse_args()
 
-    output_directory = Path(args.output_directory)
-    if output_directory is None:
+    if args.output_directory is None:
         output_directory = Path(args.input_directory, 'video_clusters')
+    else:
+        output_directory = Path(args.output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
     output_directory.mkdir(parents=True, exist_ok=True)
 
-    cluster_by_videos(args.ef_clusters_file, args.video_features_directory,
+    # get data of ef clustering
+    ef_cluster_labels, actual_efs, file_names = rh.read_cluster_labels(
+        args.ef_clusters_file)
+
+    cluster_by_videos(ef_cluster_labels, actual_efs, file_names,
+                      args.video_features_directory,
                       output_directory, standardize=True, normalize=False)
 
 
-def cluster_by_videos(ef_clusters_file, video_features_directory,
+def cluster_by_videos(ef_cluster_labels, actual_efs, file_names,
+                      video_features_directory,
                       output_directory, standardize=True, normalize=False,
-                      pca=True):
-    # get data of ef clustering
-    ef_cluster_labels, actual_efs, file_names = rh.read_cluster_labels(ef_clusters_file)
+                      pca=False):
 
     # for standardization/normalization: num_instances * num_features
     all_extracted_features = []
@@ -58,10 +63,12 @@ def cluster_by_videos(ef_clusters_file, video_features_directory,
 
     # normalize/standardize features
     if normalize:
+        print('normalizing')
         extracted_features_per_cluster = transform(
             Normalizer(), all_extracted_features,
             extracted_features_per_cluster)
     if standardize:
+        print('standardizing')
         extracted_features_per_cluster = transform(
             StandardScaler(), all_extracted_features,
             extracted_features_per_cluster)
@@ -95,7 +102,7 @@ def cluster_by_videos(ef_clusters_file, video_features_directory,
             cluster_centers = [extracted_features_per_cluster[i][0]]
         else:
             cluster_labels, cluster_centers = cl.compare_n_clusters_k_medoids(
-                extracted_features_per_cluster[i], max_n_clusters, plot=False,
+                extracted_features_per_cluster[i], max_n_clusters, plot=True,
                 plot_name="cluster_labels_video_" + str(i) + ".png")[0:2]
 
         # get indices of corresponding echocardiograms
