@@ -23,9 +23,10 @@ def main():
     args = parser.parse_args()
 
     avi_directory = Path(args.input_directory, 'Videos')
-    output_directory = Path(args.output_directory)
-    if output_directory is None:
+    if args.output_directory is None:
         output_directory = Path(args.input_directory, 'still_images')
+    else:
+        output_directory = Path(args.output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
     metadata_path = Path(args.input_directory, args.metadata_filename)
     volumes_path = Path(args.input_directory, args.volumes_filename)
