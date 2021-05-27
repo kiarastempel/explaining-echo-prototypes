@@ -1,6 +1,5 @@
 import argparse
 from pathlib import Path
-
 import numpy as np
 from tensorflow import keras
 from two_D_resnet import get_data

@@ -1,8 +1,6 @@
 import argparse
-import numpy as np
 from pathlib import Path
 from explainability import clustering_videos
-from two_D_resnet import get_data
 from explainability import read_helpers as rh
 
 
