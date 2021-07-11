@@ -40,6 +40,7 @@ def main():
 
 def create_still_images(volume_tracings_data_frame, avi_directory, output_directory):
     for _, row in volume_tracings_data_frame.T.iteritems():
+
         file_path = os.path.join(avi_directory, row['FileName'])
         frame_position = row['Frame']
         # print('File to convert:', file_path)
@@ -77,11 +78,15 @@ def get_volume_tracings(metadata_path, volumes_path, output_directory):
         .merge(file_list_data_frame[['FileName', 'ESV']], on='FileName',
                how='inner') \
         .rename(columns={'ESV': 'Volume'})
+    esv_tracings_data_frame['ESV/EDV'] = 'ESV'
+    print("len", len(esv_tracings_data_frame))
     edv_tracings_data_frame = volume_tracings_data_frame.loc[
         volume_tracings_data_frame.groupby('FileName')['AxisLength'].idxmax()] \
         .merge(file_list_data_frame[['FileName', 'EDV']], on='FileName',
                how='inner') \
         .rename(columns={'EDV': 'Volume'})
+    edv_tracings_data_frame['ESV/EDV'] = 'EDV'
+    print("len2", len(edv_tracings_data_frame)) # TODO: check unten in Methode Länge von VAL & TRAIN
     volume_tracings_data_frame = pd.concat(
         [esv_tracings_data_frame, edv_tracings_data_frame]).reset_index(drop=True)
     volume_tracings_data_frame = volume_tracings_data_frame.sort_values(
@@ -89,7 +94,7 @@ def get_volume_tracings(metadata_path, volumes_path, output_directory):
     volume_tracings_data_frame['Image_FileName'] = \
         volume_tracings_data_frame['FileName'].str.replace(r'.avi$', '') + '_' \
         + volume_tracings_data_frame['Frame'].astype(str) + '.png'
-    print(volume_tracings_data_frame[['FileName', 'Frame', 'AxisLength', 'Volume']])
+    print(volume_tracings_data_frame[['FileName', 'Frame', 'AxisLength', 'Volume', 'ESV/EDV']])
 
     # split into train, validation and test data
     volume_tracings_data_frame['Split'] = ''
@@ -119,8 +124,6 @@ def get_volume_tracings(metadata_path, volumes_path, output_directory):
                 volume_tracings_data_frame.at[i, 'Split'] = 'VAL'
                 volume_tracings_data_frame.at[i + 1, 'Split'] = 'VAL'
     volume_tracings_data_frame.to_csv(Path(output_directory, 'FrameVolumes.csv'), index=False)
-    print('smaller', counter_smaller)
-    print('bigger', counter_bigger)
     return volume_tracings_data_frame
 
 

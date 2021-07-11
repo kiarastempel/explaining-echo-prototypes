@@ -26,13 +26,16 @@ def main():
     # get EF of all videos
     metadata_path = Path(args.input_directory, args.frame_volumes_filename)
     file_list_data_frame = pandas.read_csv(metadata_path)
-    volumes = file_list_data_frame[file_list_data_frame.Split == 'TRAIN'][['Image_FileName', 'Volume']]
-    volumes = volumes.append(file_list_data_frame[file_list_data_frame.Split == 'VAL'][['Image_FileName', 'Volume']])
+    volumes = file_list_data_frame[file_list_data_frame.Split == 'TRAIN'][['Image_FileName', 'Volume', 'ESV/EDV']]
+    volumes = volumes.append(file_list_data_frame[file_list_data_frame.Split == 'VAL'][['Image_FileName', 'Volume', 'ESV/EDV']])
     volumes = volumes.reset_index()
     volumes['FileName'] = volumes['Image_FileName']
     volumes['EF'] = volumes['Volume']  # just to allow reuse of cluster function
+    volumes_esv = volumes[volumes['ESV/EDV'] == 'ESV'].reset_index()
+    volumes_edv = volumes[volumes['ESV/EDV'] == 'EDV'].reset_index()
 
-    clustering_ef.cluster_by_ef(volumes, args.max_n_clusters, output_directory)
+    clustering_ef.cluster_by_ef(volumes_esv, args.max_n_clusters, output_directory, '_esv')
+    clustering_ef.cluster_by_ef(volumes_edv, args.max_n_clusters, output_directory, '_edv')
 
 
 if __name__ == '__main__':
