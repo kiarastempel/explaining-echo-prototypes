@@ -5,6 +5,7 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from pathlib import Path
 from PIL import Image
 from classification_models.keras import Classifiers
+import math
 import tensorflow as tf
 import torchvision.models as models
 import random
@@ -15,10 +16,13 @@ import numpy as np
 import os
 import tempfile
 import matplotlib.pyplot as plt
+from keras.optimizers import SGD
+from sklearn.preprocessing import LabelEncoder
+from keras.callbacks import LearningRateScheduler
 
 
 def main():
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(2)
+    # os.environ["CUDA_VISIBLE_DEVICES"] = str(2)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory',
@@ -31,7 +35,7 @@ def main():
     parser.add_argument('-fv', '--frame_volumes_filename', default='FrameVolumes.csv',
                         help='Name of the file containing frame volumes.')
     parser.add_argument('-b', '--batch_size', default=32, type=int)
-    parser.add_argument('-e', '--epochs', default=2, type=int)
+    parser.add_argument('-e', '--epochs', default=1, type=int)
     parser.add_argument('-l', '--learning_rate', default=0.0001, type=float)
     parser.add_argument('-l2', '--l2_regularization', default=0.01, type=float)
     parser.add_argument('-a', '--augmentation_intensity', default=10, type=int)
@@ -42,14 +46,35 @@ def main():
         output_directory = Path(args.input_directory)
     else:
         output_directory = Path(args.output_directory)
-    output_directory_model = Path(output_directory, 'two_d_model_' + str(args.ending_out))
+    output_directory_model = Path(output_directory, 'models', 'two_d_model_' + str(args.ending_out))
     output_directory_model.mkdir(parents=True, exist_ok=True)
-    output_directory_history = Path(output_directory, 'metrics_history_' + str(args.ending_out))
+    output_directory_history = Path(output_directory, 'model_evaluations', 'metrics_history_' + str(args.ending_out))
     output_directory_history.mkdir(parents=True, exist_ok=True)
     frame_volumes_path = Path(args.input_directory, args.frame_volumes_filename)
 
     tf.random.set_seed(5)
     random.seed(5)
+
+    test_mae = 1000000
+
+    # for bs in [32, 64, 128, 256]:
+    #     for lr in [0.00001, 0.0001, 0.001, 0.01, 0.1]:
+    #         for l2_reg in [0.3, 0.2, 0.1, 0.05, 0.01, 0.001]:
+    #             for dropout in [0.0, 0.1, 0.2, 0.3, 0.4]:
+    #                 model, train_mae, current_test_mae = train(
+    #                     args.input_directory, frame_volumes_path, l2_reg,
+    #                     dropout, args.augmentation_intensity,
+    #                     lr, bs, args.epochs,
+    #                     output_directory_model, output_directory_history)
+    #                 # save model if it is the best so far
+    #                 if current_test_mae < test_mae:
+    #                     model.save(output_directory_model)
+    #                     print('Model saved')
+    #                     save_history(
+    #                         [current_test_mae, train_mae, bs, lr, l2_reg,
+    #                          dropout],
+    #                         output_directory_history,
+    #                         'best_so_far.txt')
 
     train(args.input_directory, frame_volumes_path, args.l2_regularization,
           args.dropout_intensity, args.augmentation_intensity,
@@ -70,6 +95,8 @@ def train(input_directory, frame_volumes_path, l2_regularization,
     model = get_resnet18_model(l2_regularization, dropout_intensity)
     optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
     loss = keras.losses.MeanSquaredError()
+    # optimizer = SGD(lr=0.0, momentum=0.9)
+    # loss = 'binary_crossentropy'
     model.compile(loss=loss, optimizer=optimizer, metrics=['mse', 'mae', 'mape'])
     print('Compiled')
 
@@ -95,6 +122,23 @@ def train(input_directory, frame_volumes_path, l2_regularization,
     early_stop_callback = tf.keras.callbacks.EarlyStopping(
         monitor='val_loss', min_delta=0.1, patience=20, verbose=0,
         mode='auto', baseline=None, restore_best_weights=True)
+
+    # learning schedule callback
+    lrate = LearningRateScheduler(step_decay)
+
+    # save model after each epoch
+    filepath = "data/models/saved-model-{epoch:02d}-{val_mae:.2f}"
+    checkpoint = tf.keras.callbacks.ModelCheckpoint(
+        filepath=filepath,
+        monitor="val_loss",
+        verbose=0,
+        save_best_only=False,
+        save_weights_only=False,
+        mode="auto",
+        save_freq="epoch",
+        options=None
+    )
+
     history = model.fit(train_data,
                         validation_data=(val_still_images, val_volumes),
                         epochs=epochs,
@@ -115,19 +159,23 @@ def train(input_directory, frame_volumes_path, l2_regularization,
     print('History saved')
 
     # evaluate model
-    loss, mse, mae, mape = model.evaluate(test_still_images, test_volumes)
-    print('MSE Test:', mse)
-    print('MAE Test:', mae)
-    print('MAPE Test:', mape)
-    save_history([mse, mae, mape], output_directory_history, 'eval_test.txt')
-    loss, mse, mae, mape = model.evaluate(train_still_images, train_volumes)
+    loss, mse, train_mae, mape = model.evaluate(train_still_images, train_volumes)
     print('MSE Train:', mse)
-    print('MAE Train:', mae)
+    print('MAE Train:', train_mae)
     print('MAPE Train:', mape)
-    save_history([mse, mae, mape], output_directory_history, 'eval_train.txt')
+    save_history([mse, train_mae, mape], output_directory_history, 'eval_train.txt')
+    loss, mse, test_mae, mape = model.evaluate(test_still_images, test_volumes)
+    print('MSE Test:', mse)
+    print('MAE Test:', test_mae)
+    print('MAPE Test:', mape)
+    save_history([mse, test_mae, mape], output_directory_history, 'eval_test.txt')
+
+    return model, train_mae, test_mae
 
 
-def get_data(input_directory, frame_volumes_path, return_numpy_arrays=False):
+# volume_type has to be in {None, 'ESV', 'EDV'}
+def get_data(input_directory, frame_volumes_path, return_numpy_arrays=False,
+             volume_type=None):
     train_still_images = []
     train_volumes = []
     train_filenames = []
@@ -138,10 +186,13 @@ def get_data(input_directory, frame_volumes_path, return_numpy_arrays=False):
     val_volumes = []
     val_filenames = []
     volume_tracings_data_frame = pd.read_csv(frame_volumes_path)
+    if volume_type is not None:
+        volume_tracings_data_frame = volume_tracings_data_frame[
+            volume_tracings_data_frame['ESV/EDV'] == volume_type].reset_index()
 
     i = 0
     for _, row in volume_tracings_data_frame.T.iteritems():
-        print(i)
+        # print(i)
         i += 1
         # get image and y label
         image = Image.open(Path(input_directory, row['Image_FileName']))
@@ -203,6 +254,13 @@ def get_resnet18_model(l2_reg, dropout=0.1, untrained_layers=0):
     model.add(ResNet18(input_shape=(112, 112, 3), weights='imagenet',
                        include_top=False))
     model.add(keras.layers.GlobalAveragePooling2D())
+    model.add(keras.layers.Dropout(dropout))
+    model.add(keras.layers.Dense(256))  # layer 3
+    model.add(keras.layers.Dense(128))  # layer 4
+    model.add(keras.layers.Dense(64))  # layer 5
+    model.add(keras.layers.Dense(32))  # layer 6
+    model.add(keras.layers.Dense(16))  # layer 7
+    model.add(keras.layers.Dense(8))  # layer 8
     model.add(keras.layers.Dense(1))
 
     # model = ResNet18(input_shape=(112, 112, 3), weights='imagenet',
@@ -260,8 +318,18 @@ def add_regularization(model, regularizer=tf.keras.regularizers.l2(0.01)):
     return model
 
 
+# learning rate schedule
+# source: https://machinelearningmastery.com/using-learning-rate-schedules-deep-learning-models-python-keras/
+def step_decay(epoch):
+    initial_lrate = 0.1
+    drop = 0.5
+    epochs_drop = 10.0
+    lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
+    return lrate
+
+
 def save_history(history, output_directory, file_name):
-    out = Path(output_directory, '..', 'metrics_history')
+    out = Path(output_directory)
     out.mkdir(parents=True, exist_ok=True)
     with open(Path(out, file_name), 'w') as txt_file:
         for h in history:
