@@ -49,11 +49,15 @@ def kde(data, bw_method):
 def jenks_caspall(data, sort_col, n_clusters):
     data.sort_values(by=sort_col)
     breaks = jenkspy.jenks_breaks(data['EF'], nb_class=n_clusters)
-    data['cut_jenks'] = pandas.cut(data['EF'],
-                                   bins=breaks,
-                                   labels=['bucket_1', '2', '3', '4', '5'])
-    print(data['cut_jenks'])
-    return breaks
+    labels = [str(i) for i in range(0, n_clusters)]
+    print("Length labels", len(labels))
+    print("Length bins", len(breaks))
+    data['Cluster'] = pandas.cut(data['EF'],
+                                 bins=breaks,
+                                 labels=labels,
+                                 include_lowest=True)
+    # print(data[['FileName', 'Cluster']])
+    return breaks, data
 
 
 def find_n_clusters(measures):

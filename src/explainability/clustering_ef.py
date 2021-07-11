@@ -34,7 +34,7 @@ def main():
     cluster_by_ef(ef, args.max_n_clusters, output_directory)
 
 
-def cluster_by_ef(ef, max_n_clusters, output_directory):
+def cluster_by_ef(ef, max_n_clusters, output_directory, file_ending=''):
     # kmeans
     # cluster_labels, cluster_centers = cl.compare_n_clusters_k_means(
     #     ef[['EF']], max_n_clusters, plot=False)[0:2]
@@ -64,38 +64,41 @@ def cluster_by_ef(ef, max_n_clusters, output_directory):
     #         txt_file.write(str(i) + " " + str(cluster_centers[i]) + "\n")
 
     # kernel density estimation
-    borders, cluster_centers = cl.kde(ef[['EF']], 'silverman')
-    # borders, cluster_centers = cl.kde(ef[['EF']], 'scott')
-    # borders, cluster_centers = cl.kde(ef[['EF']], 'normal_reference')
+    # borders, cluster_centers = cl.kde(ef[['EF']], 'silverman')
+    # # borders, cluster_centers = cl.kde(ef[['EF']], 'scott')
+    # # borders, cluster_centers = cl.kde(ef[['EF']], 'normal_reference')
+    #
+    # cluster_labels = []
+    # for i in range(len(ef[['EF']])):
+    #     current_ef = ef.at[i, 'EF']
+    #     clustered = False
+    #     for j in range(len(borders)):
+    #         if current_ef <= borders[j]:
+    #             cluster_labels.append(j)
+    #             clustered = True
+    #             break
+    #     if not clustered:
+    #         cluster_labels.append(len(borders))
+    #
 
-    cluster_labels = []
-    for i in range(len(ef[['EF']])):
-        current_ef = ef.at[i, 'EF']
-        clustered = False
-        for j in range(len(borders)):
-            if current_ef <= borders[j]:
-                cluster_labels.append(j)
-                clustered = True
-                break
-        if not clustered:
-            cluster_labels.append(len(borders))
+    # jenks caspall algorithm
+    natural_breaks, data = cl.jenks_caspall(ef, 'EF', n_clusters=max_n_clusters)
+    print(natural_breaks)
 
-    with open(Path(output_directory, 'cluster_labels_ef.txt'), "w") as txt_file:
+    cluster_labels = data['Cluster'].tolist()
+
+    with open(Path(output_directory, 'cluster_labels_ef' + file_ending + '.txt'), "w") as txt_file:
         for i in range(len(cluster_labels)):
             txt_file.write(str(cluster_labels[i]) + " " + str(ef.at[i, 'EF'])
                            + " " + str(ef.at[i, 'FileName']) + "\n")
 
-    with open(Path(output_directory, 'cluster_centers_ef.txt'), "w") as txt_file:
-        for i in range(len(cluster_centers)):
-            txt_file.write(str(i) + " " + str([cluster_centers[i]]) + "\n")
+    with open(Path(output_directory, 'cluster_centers_ef' + file_ending + '.txt'), "w") as txt_file:
+        for i in range(len(natural_breaks) - 1):
+            txt_file.write(str(i) + " " + str([(natural_breaks[i] + natural_breaks[i + 1]) / 2.0]) + "\n")
 
-    with open(Path(output_directory, 'cluster_upper_borders_ef.txt'), "w") as txt_file:
-        for i in range(len(borders)):
-            txt_file.write(str(i) + " " + str([borders[i]]) + "\n")
-
-    # jenks caspall algorithm
-    # natural_breaks = cl.jenks_caspall(ef, 'EF', n_clusters=5)
-    # print(natural_breaks)
+    with open(Path(output_directory, 'cluster_upper_borders_ef' + file_ending + '.txt'), "w") as txt_file:
+        for i in range(len(natural_breaks) - 1):
+            txt_file.write(str(i) + " " + str([natural_breaks[i + 1]]) + "\n")
 
 
 def get_ef_cluster_centers_indices(cluster_centers, ef_list):
