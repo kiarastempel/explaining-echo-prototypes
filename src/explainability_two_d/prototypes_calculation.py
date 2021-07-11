@@ -2,7 +2,7 @@ import argparse
 import numpy as np
 import os
 from pathlib import Path
-from explainability import prototypes_calculation
+from explainability import prototypes_calculation_videos
 from two_D_resnet import get_data
 
 
@@ -23,6 +23,8 @@ def main():
     parser.add_argument('-ic', '--image_clusters_directory',
                         default='../../data/image_clusters',
                         help='Directory with image cluster labels')
+    parser.add_argument('-vt', '--volume_type', default='ESV',
+                        help='ESV, EDV or None')
     args = parser.parse_args()
 
     if args.output_directory is None:
@@ -36,7 +38,7 @@ def main():
 
     # get train/validation/test data
     train_still_images, _, train_filenames, _, _, _, val_still_images, _, val_filenames = get_data(
-        args.input_directory, frame_volumes_path)
+        args.input_directory, frame_volumes_path, volume_type=args.volume_type)
     still_images = train_still_images.extend(val_still_images)
     file_names = train_filenames.extend(val_filenames)
     print('Data loaded')
@@ -49,14 +51,23 @@ def main():
 def calculate_prototypes(still_images, file_names, image_clusters_directory,
                          output_file, get_images=True):
     num_volume_clusters = int(len(os.listdir(image_clusters_directory)) / 2)
-    prototypes = prototypes_calculation.get_kmedoids_prototype_videos(
-        num_volume_clusters,
-        image_clusters_directory,
-        None,
-        None,
-        None,
-        get_videos=False
-    )[0]
+    prototypes, ef_cluster_sizes, ef_cluster_means, ef_cluster_stds, video_cluster_sizes, video_cluster_means, video_cluster_stds = \
+        prototypes_calculation_videos.get_kmedoids_prototype_videos(
+            num_volume_clusters,
+            image_clusters_directory,
+            None,
+            None,
+            None,
+            get_videos=False
+        )
+
+    print("--------------")
+    for i in range(len(ef_cluster_sizes)):
+        print("EF Cluster", i, "size", ef_cluster_sizes[i], "mean",
+              ef_cluster_means[i], "stds", ef_cluster_stds[i])
+        for j in range(len(video_cluster_sizes[i])):
+            print("Video Cluster", j, "size", video_cluster_sizes[i][j], "mean", video_cluster_means[i][j], "stds", video_cluster_stds[i][j])
+        print("--------------")
 
     if get_images:
         prototypes = get_images_of_prototypes(prototypes, still_images, file_names)

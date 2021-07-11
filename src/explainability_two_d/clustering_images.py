@@ -19,6 +19,10 @@ def main():
     parser.add_argument('-cl', '--volume_clusters_file',
                         default='../../data/clustering_volume/cluster_labels_ef.txt',
                         help='Path to file containing volume cluster labels')
+    parser.add_argument('-vt', '--volume_type', default='ESV',
+                        help='ESV, EDV or None')
+    parser.add_argument('-n', '--max_n_clusters', default=100, type=int,
+                        help="Maximum number of clusters to be evaluated.")
     args = parser.parse_args()
 
     if args.output_directory is None:
@@ -29,8 +33,7 @@ def main():
     output_directory.mkdir(parents=True, exist_ok=True)
 
     # get data of volume clustering
-    volume_cluster_labels, actual_volumes, file_names = rh.read_cluster_labels(
-        args.volume_clusters_file)
+    volume_cluster_labels, actual_volumes, file_names = rh.read_cluster_labels(args.volume_clusters_file)
     print('Data loaded')
 
     clustering_videos.cluster_by_videos(volume_cluster_labels,
@@ -38,6 +41,7 @@ def main():
                                         file_names,
                                         args.image_features_directory,
                                         output_directory,
+                                        n=args.max_n_clusters,
                                         standardize=True,
                                         normalize=False)
 
