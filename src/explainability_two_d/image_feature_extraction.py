@@ -18,8 +18,10 @@ def main():
     parser.add_argument('-cl', '--volume_clusters_file',
                         default='../../data/clustering_volume/cluster_labels_ef.txt',
                         help='Path to file containing ef cluster labels')
+    parser.add_argument('-vt', '--volume_type', default='ESV',
+                        help='ESV, EDV or None')
     parser.add_argument('-mp', '--model_path', required=True)
-    parser.add_argument('-l', '--hidden_layer_index', default=86, type=int)
+    parser.add_argument('-l', '--hidden_layer_index', type=int)
     args = parser.parse_args()
 
     if args.output_directory is None:
@@ -34,7 +36,7 @@ def main():
 
     # get train/validation/test data
     train_still_images, _, _, _, _, _, val_still_images, _, _ = get_data(
-        args.input_directory, frame_volumes_path)
+        args.input_directory, frame_volumes_path, volume_type=args.volume_type)
     train_still_images.extend(val_still_images)
     print('Data loaded')
 
@@ -54,7 +56,10 @@ def extract_features(model_path, hidden_layer_index, volume_cluster_labels,
     #                        show_shapes=True)
 
     # extract features of videos of each ef-cluster at given hidden layer index
-    print("Layer index: ", hidden_layer_index)
+    print('Number of layers', len(model.layers))
+    if hidden_layer_index is None:
+        hidden_layer_index = len(model.layers) - 2
+    print('Hidden layer index', hidden_layer_index)
     num_volume_clusters = max(volume_cluster_labels) + 1
     print("Calculated " + str(num_volume_clusters) + " ef clusters")
     for i in range(num_volume_clusters):
@@ -71,7 +76,7 @@ def extract_features(model_path, hidden_layer_index, volume_cluster_labels,
 
 
 def get_hidden_layer_features(model, train_dataset, cluster_labels,
-                              volume_cluster_index, layer_index):
+                              volume_cluster_index, hidden_layer_index):
     """
     Extract features at given layer_index of given model for all
     training instances.
@@ -80,7 +85,7 @@ def get_hidden_layer_features(model, train_dataset, cluster_labels,
     print("Number of layers:", len(model.layers))
     # layer_index = len(model.layers) - 2
     extractor = keras.Model(inputs=[model.input],
-                            outputs=model.layers[layer_index].output)
+                            outputs=model.layers[hidden_layer_index].output)
     extracted_features = []
     i = 0
     for instance in train_dataset:
