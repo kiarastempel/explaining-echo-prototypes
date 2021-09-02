@@ -8,6 +8,8 @@ from two_D_resnet import get_data
 
 
 def main():
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(2)
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory', default='../../data',
                         help="Directory with still images.")
@@ -30,10 +32,10 @@ def main():
     # get actual volumes of all still images
     metadata_path = Path(args.input_directory, args.frame_volumes_filename)
     file_list_data_frame = pandas.read_csv(metadata_path)
-    volumes = file_list_data_frame[file_list_data_frame.Split == 'TRAIN'][['Image_FileName', 'Volume', 'ESV/EDV']]
-    volumes = volumes.append(file_list_data_frame[file_list_data_frame.Split == 'VAL'][['Image_FileName', 'Volume', 'ESV/EDV']])
+    volumes = file_list_data_frame[file_list_data_frame.Split == 'TRAIN'][['ImageFileName', 'Volume', 'ESV/EDV']]
+    volumes = volumes.append(file_list_data_frame[file_list_data_frame.Split == 'VAL'][['ImageFileName', 'Volume', 'ESV/EDV']])
     volumes = volumes.reset_index()
-    volumes['FileName'] = volumes['Image_FileName']
+    volumes['FileName'] = volumes['ImageFileName']
     volumes['EF'] = volumes['Volume']  # just to allow reuse of cluster function
     actual_volumes_esv = volumes[volumes['ESV/EDV'] == 'ESV'].reset_index()
     actual_volumes_edv = volumes[volumes['ESV/EDV'] == 'EDV'].reset_index()
@@ -56,9 +58,11 @@ def main():
 
     predicted_volumes_esv = get_predictions(esv_train_still_images, args.model_path)
     predicted_volumes_edv = get_predictions(edv_train_still_images, args.model_path)
+    actual_volumes_esv['EF'] = predicted_volumes_esv
+    actual_volumes_edv['EF'] = predicted_volumes_edv
 
-    clustering_ef.cluster_by_ef(predicted_volumes_esv, args.max_n_clusters, output_directory, '_esv')
-    clustering_ef.cluster_by_ef(predicted_volumes_edv, args.max_n_clusters, output_directory, '_edv')
+    clustering_ef.cluster_by_ef(actual_volumes_esv, args.max_n_clusters, output_directory, '_esv')
+    clustering_ef.cluster_by_ef(actual_volumes_edv, args.max_n_clusters, output_directory, '_edv')
 
 
 def get_predictions(still_images, model_path):
