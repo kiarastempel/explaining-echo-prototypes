@@ -94,7 +94,7 @@ def cluster_by_videos(ef_cluster_labels, actual_efs, file_names,
         videos_in_cluster = [j for j in range(len(ef_cluster_labels))
                              if ef_cluster_labels[j] == i]
         # K-Medoids
-        max_n_clusters = min(n, len(videos_in_cluster))
+        max_n_clusters = min(n, len(videos_in_cluster) - 2)
         out_file_path = Path(output_directory, 'cluster_labels_video_' + str(i) + '.txt')
         out_file_path_centers = Path(output_directory, 'cluster_centers_video_' + str(i) + '.txt')
         # only one video in ef-cluster -> put it in the only video cluster
