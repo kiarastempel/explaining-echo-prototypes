@@ -1,9 +1,14 @@
 import argparse
 import json
+import ast
+import math
 import numpy as np
 import explainability.read_helpers as rh
+import explainability_two_d.prototypes_quality as pq
+from shapely.geometry import Polygon
 from pathlib import Path
 from tensorflow import keras
+from sklearn.preprocessing import StandardScaler, Normalizer
 from sklearn.metrics.pairwise import cosine_similarity
 from skimage.metrics import structural_similarity, peak_signal_noise_ratio
 from data_loader import tf_record_loader
@@ -87,7 +92,7 @@ def evaluate_prototypes(ef_cluster_centers, ef_cluster_borders,
                         prototypes, train_dataset,
                         test_dataset, metadata_filename, model_path,
                         hidden_layer_index, number_input_frames,
-                        output_directory, compare_videos=False):
+                        output_directory):
     # iterate over testset/trainingset:
     #   (1) get its ef-cluster (by choosing the closest center)
     #   (2) compare each test video (or its extracted features) to all
@@ -104,8 +109,8 @@ def evaluate_prototypes(ef_cluster_centers, ef_cluster_borders,
                                    outputs=model.layers[0].layers[hidden_layer_index + 1].output)
     extractor = keras.Model(inputs=model.get_layer(index=0).input,
                             outputs=model.layers[0].layers[hidden_layer_index].output)
-    if compare_videos:
-        prototypes = get_videos_of_prototypes(prototypes, metadata_filename, train_dataset, number_input_frames)
+
+    prototypes = get_videos_of_prototypes(prototypes, metadata_filename, train_dataset, number_input_frames)
 
     similarity_measures = ['euclidean', 'cosine', 'ssim', 'psnr']
 
@@ -113,19 +118,19 @@ def evaluate_prototypes(ef_cluster_centers, ef_cluster_borders,
                         ef_cluster_centers, ef_cluster_borders,
                         prototypes, predicting_model, extractor,
                         output_directory, similarity_measures,
-                        compare_videos, data='train')
+                        data='train')
     # calculate_distances(test_dataset, number_input_frames,
     #                     ef_cluster_centers, ef_cluster_borders,
     #                     prototypes, predicting_model, extractor,
     #                     output_directory, similarity_measures,
-    #                     compare_videos, data='test')
+    #                     data='test')
 
 
 def calculate_distances(dataset, number_input_frames, ef_cluster_centers,
                         ef_cluster_borders,
                         prototypes, predicting_model, extractor,
                         output_directory, similarity_measures,
-                        compare_videos, data='train'):
+                        data='train'):
     diffs_ef = {m: [] for m in similarity_measures}
     diffs_features = {m: [] for m in similarity_measures}
     diffs_videos = {m: [] for m in similarity_measures}
@@ -233,8 +238,7 @@ def calculate_distances(dataset, number_input_frames, ef_cluster_centers,
         save_distances(output_directory, data, sim, diffs_ef[sim], 'ef'
                                                                    '')
         save_distances(output_directory, data, sim, diffs_features[sim], 'features')
-        if compare_videos:
-            save_distances(output_directory, data, sim, diffs_videos[sim], 'videos')
+        # save_distances(output_directory, data, sim, diffs_videos[sim], 'videos')
 
     with open(Path(output_directory, data + '_prediction_error.txt'), 'w') as txt_file:
         for e in prediction_error:
@@ -262,53 +266,71 @@ def save_metadata(diffs, output_file):
         json.dump(metadata, json_file)
 
 
-def get_most_similar_prototype_euclidean(prototypes, video, features=True):
+def get_most_similar_prototypes(prototypes, video, volume_tracings_dict,
+                                weights=[1.0, 0.0, 0.0, 0.0]): # [0.4, 0.2, 0.2, 0.2]
+    # get polygon of current instance
+    instance_polygon = Polygon(zip(
+        ast.literal_eval(volume_tracings_dict[video.file_name]['X']),
+        ast.literal_eval(volume_tracings_dict[video.file_name]['Y'])
+    ))
+    instance_points = [list(x) for x in zip(
+        ast.literal_eval(volume_tracings_dict[video.file_name]['X']),
+        ast.literal_eval(volume_tracings_dict[video.file_name]['Y'])
+    )]
     # compare given video to all prototypes of corresponding ef_cluster
-    # return the one with the smallest distance
-    # (here prototypes and video may also be given as extracted features)
-    most_similar_index = 0
-    most_similar = prototypes[most_similar_index]
-    if features:
-        min_dist = np.linalg.norm(
-            [np.array(video.features) - np.array(most_similar.features)])
-    else:
-        min_dist = np.linalg.norm(
-            [np.array(video.video) - np.array(most_similar.video)])
-    i = 1
-    for prototype in prototypes[1:]:
-        if features:
-            current_dist = np.linalg.norm(
-                [np.array(video.features) - np.array(prototype.features)])
-        else:
-            current_dist = np.linalg.norm(
-                [np.array(video.video) - np.array(prototype.video)])
-        if current_dist < min_dist:
-            most_similar = prototype
-            most_similar_index = i
-            min_dist = current_dist
+    # using multiple metrics
+    # return the one with the smallest/minimum distance
+    euc_feature_diff = []
+    cosine_feature_diff = []
+    iou = []
+    angle_diff = []
+    volumes_diff = []
+    i = 0
+    for prototype in prototypes:
+        # feature similarity
+        euc_feature_diff.append(np.linalg.norm([np.array(video.features) - np.array(prototype.features)]))
+        cosine_feature_diff.append(-1 * (cosine_similarity(video.features, [prototype.features])[0][0]))
+
+        # Intersection of Union (IoU) of left ventricle polygons
+        prototype_polygon = Polygon(zip(
+            prototypes[i].segmentation['X'],
+            prototypes[i].segmentation['Y']
+        ))
+        prototype_points = [list(x) for x in zip(
+            prototypes[i].segmentation['X'],
+            prototypes[i].segmentation['Y']
+        )]
+        intersection_polygon = instance_polygon.intersection(prototype_polygon)
+        intersection = intersection_polygon.area
+        union = prototype_polygon.area + instance_polygon.area
+        iou.append(-1 * (intersection / union))
+
+        # angle similarity
+        angle_diff.append(pq.compare_polygons_dtw(instance_points, prototype_points))
+
+        # volume similarity
+        volumes_diff.append(abs(prototype.ef - video.ef))
+
         i += 1
-    return most_similar, most_similar_index
+    # standardize
+    transformer = StandardScaler()
+    euc_index = get_most_similar_prototype_index(euc_feature_diff, iou, angle_diff, volumes_diff, transformer, weights)
+    cosine_index = get_most_similar_prototype_index(cosine_feature_diff, iou, angle_diff, volumes_diff, transformer, weights)
+    return prototypes[euc_index], euc_index, euc_feature_diff[euc_index], -1 * iou[euc_index], angle_diff[euc_index], volumes_diff[euc_index], \
+           prototypes[cosine_index], cosine_index, -1 * cosine_feature_diff[cosine_index], -1 * iou[cosine_index], angle_diff[cosine_index], volumes_diff[cosine_index]
 
 
-def get_most_similar_prototype_cosine(prototypes, video, features=True):
-    most_similar_index = 0
-    most_similar = prototypes[most_similar_index]
-    if features:
-        max_sim = cosine_similarity(video.features, [most_similar.features])[0][0]
-    else:
-        max_sim = cosine_similarity([video.video.flatten()], [most_similar.video.flatten()])[0][0]
-    i = 1
-    for prototype in prototypes[1:]:
-        if features:
-            current_sim = cosine_similarity(video.features, [prototype.features])[0][0]
-        else:
-            current_sim = cosine_similarity([video.video.flatten()], [prototype.video.flatten()])[0][0]
-        if current_sim > max_sim:
-            most_similar = prototype
-            most_similar_index = i
-            max_sim = current_sim
-        i += 1
-    return most_similar, most_similar_index
+def get_most_similar_prototype_index(feature_diff, iou, angle_diff, volumes_diff, transformer,
+                                     weights):
+    evaluation = [list(x) for x in zip(feature_diff, iou, angle_diff, volumes_diff)]
+    # print('eval', evaluation)
+    eval_ft = transformer.fit_transform(evaluation)
+    # print('eval normed', eval_ft)
+    weighted_sum = [weights[0] * x[0] + weights[1] * x[1] + weights[2] * x[2] + weights[3] * x[3] for x in eval_ft]
+    # print('weighted sum', weighted_sum)
+    # get index of prototype with minimum difference
+    most_similar_index = weighted_sum.index(min(weighted_sum))
+    return most_similar_index
 
 
 def get_most_similar_prototype_ssim(prototypes, video, features=True):

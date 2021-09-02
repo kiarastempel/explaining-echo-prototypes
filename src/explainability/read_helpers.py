@@ -1,10 +1,15 @@
+import pandas as pd
+import ast
+
 
 class Video:
-    def __init__(self, features, ef, file_name, video=None):
+    def __init__(self, features, ef, file_name, video=None, segmentation=None):
         self.features = features
         self.ef = ef
         self.file_name = file_name
         self.video = video
+        # segmentation: {'X': list of coordinates, 'Y': list of coordinates}
+        self.segmentation = segmentation
 
 
 def read_cluster_labels(cluster_file):
@@ -107,7 +112,7 @@ def read_ef_cluster_centers(centers_file_path):
     return cluster_centers
 
 
-def read_prototypes(centers_file_path):
+def read_prototypes(centers_file_path, volume_tracings_file_path=None, actual_volumes=True):
     prototypes = {}
     new_center = True
     ef_cluster_index = 0
@@ -147,5 +152,20 @@ def read_prototypes(centers_file_path):
                 else:
                     for f in line_split:
                         features.append(float(f))
+    if volume_tracings_file_path and actual_volumes:
+        volume_tracings_data_frame = pd.read_csv(volume_tracings_file_path)
+        for volume_cluster_prototypes in prototypes.values():
+            for prototype in volume_cluster_prototypes:
+                volume = volume_tracings_data_frame.loc[volume_tracings_data_frame['ImageFileName'] == prototype.file_name]['Volume'].iloc[0]
+                prototype.ef = volume
+    return prototypes
+
+
+def get_segmentation_coordinates_of_prototypes(prototypes, volume_tracings_dict):
+    for i in range(len(prototypes)):
+        for j in range(len(prototypes[i])):
+            file_name = prototypes[i][j].file_name
+            prototypes[i][j].segmentation = {'X': ast.literal_eval(volume_tracings_dict[file_name]['X']),
+                                             'Y': ast.literal_eval(volume_tracings_dict[file_name]['Y'])}
     return prototypes
 
