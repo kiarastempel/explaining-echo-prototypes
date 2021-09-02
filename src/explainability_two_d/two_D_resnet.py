@@ -22,7 +22,7 @@ from keras.callbacks import LearningRateScheduler
 
 
 def main():
-    # os.environ["CUDA_VISIBLE_DEVICES"] = str(2)
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(2)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory',
@@ -55,7 +55,7 @@ def main():
     tf.random.set_seed(5)
     random.seed(5)
 
-    test_mae = 1000000
+    # test_mae = 1000000
 
     # for bs in [32, 64, 128, 256]:
     #     for lr in [0.00001, 0.0001, 0.001, 0.01, 0.1]:
@@ -195,7 +195,7 @@ def get_data(input_directory, frame_volumes_path, return_numpy_arrays=False,
         # print(i)
         i += 1
         # get image and y label
-        image = Image.open(Path(input_directory, row['Image_FileName']))
+        image = Image.open(Path(input_directory, row['ImageFileName']))
         frame = np.asarray(image)
         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
         frame = frame / 255.0
@@ -204,15 +204,15 @@ def get_data(input_directory, frame_volumes_path, return_numpy_arrays=False,
         if row['Split'] == 'TRAIN':
             train_still_images.append(frame)
             train_volumes.append(row['Volume'])
-            train_filenames.append(row['Image_FileName'])
+            train_filenames.append(row['ImageFileName'])
         elif row['Split'] == 'TEST':
             test_still_images.append(frame)
             test_volumes.append(row['Volume'])
-            test_filenames.append(row['Image_FileName'])
+            test_filenames.append(row['ImageFileName'])
         else:
             val_still_images.append(frame)
             val_volumes.append(row['Volume'])
-            val_filenames.append(row['Image_FileName'])
+            val_filenames.append(row['ImageFileName'])
     print("start converting")
     if return_numpy_arrays:
         train_still_images = np.array(train_still_images)
