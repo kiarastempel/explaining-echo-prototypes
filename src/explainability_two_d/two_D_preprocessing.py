@@ -1,12 +1,15 @@
 from pathlib import Path
 from PIL import Image
-from math import sqrt
+from shapely.geometry import Polygon
+import cv2
 import cv2
 import pandas as pd
+import numpy as np
 import tensorflow as tf
 import random
 import os
 import argparse
+import ast
 import matplotlib.pyplot as plt
 
 
@@ -34,7 +37,9 @@ def main():
     tf.random.set_seed(5)
     random.seed(5)
 
+    delete_incorrect_data(metadata_path, volumes_path)
     volume_tracings_data_frame = get_volume_tracings(metadata_path, volumes_path, output_directory)
+    return
     create_still_images(volume_tracings_data_frame, avi_directory, output_directory)
 
 
@@ -56,7 +61,7 @@ def create_still_images(volume_tracings_data_frame, avi_directory, output_direct
 
         # save frame as png file
         image = Image.fromarray(frame)
-        output_path = Path(output_directory, row['Image_FileName'])
+        output_path = Path(output_directory, row['ImageFileName'])
         image.save(output_path)
         # plt.figure(figsize=(5, 5))
         # plt.axis('off')
@@ -69,32 +74,56 @@ def get_volume_tracings(metadata_path, volumes_path, output_directory):
     file_list_data_frame = pd.read_csv(metadata_path, sep=',', decimal='.')[['FileName', 'ESV', 'EDV']]
     file_list_data_frame['FileName'] = file_list_data_frame['FileName'].astype(str) + '.avi'
     volume_tracings_data_frame = pd.read_csv(volumes_path, sep=',', decimal='.')
-    volume_tracings_data_frame = calc_axis_length(volume_tracings_data_frame)[['FileName', 'Frame', 'AxisLength']]
     # volume_tracings_data_frame['FileName'] = volume_tracings_data_frame['FileName'].astype(str) + '.avi'
+
+    # save all 21 coordinate pairs of left ventricle as two lists: X, Y
+    coordinates = volume_tracings_data_frame.groupby(['FileName', 'Frame'])\
+        .agg({'X1': lambda x: x.tolist()[1:],
+              'Y1': lambda x: x.tolist()[1:],
+              'X2': lambda x: x.tolist()[1:][::-1],
+              'Y2': lambda x: x.tolist()[1:][::-1]})
+    # concatenate X1 + reversed X2, Y1 + reversed Y2 to get a list of all pairs
+    coordinates['X'] = coordinates['X1'] + coordinates['X2']
+    coordinates['Y'] = coordinates['Y1'] + coordinates['Y2']
+    # for i, row in coordinates.T.iteritems():
+    #     polygon = Polygon(zip(row['X'], row['Y']))
+    #     print(polygon.is_valid)
+    #     x, y = polygon.exterior.xy
+    #     plt.plot(x, y)
+    #     for j in range(len(x)):
+    #         plt.annotate(j, (x[j], y[j]))
+    #     plt.show()
+
     volume_tracings_data_frame = volume_tracings_data_frame.groupby(
         ['FileName', 'Frame']).head(1).reset_index(drop=True)
+
+    # merge df containing X- and Y-lists and calculate axis length and area
+    volume_tracings_data_frame = volume_tracings_data_frame \
+        .merge(coordinates[['X', 'Y']], on=['FileName', 'Frame'], how='inner')
+    volume_tracings_data_frame = calc_axis_length(volume_tracings_data_frame)
+    volume_tracings_data_frame = calc_poly_area(volume_tracings_data_frame)
+
     esv_tracings_data_frame = volume_tracings_data_frame.loc[
         volume_tracings_data_frame.groupby('FileName')['AxisLength'].idxmin()] \
         .merge(file_list_data_frame[['FileName', 'ESV']], on='FileName',
                how='inner') \
         .rename(columns={'ESV': 'Volume'})
     esv_tracings_data_frame['ESV/EDV'] = 'ESV'
-    print("len", len(esv_tracings_data_frame))
     edv_tracings_data_frame = volume_tracings_data_frame.loc[
         volume_tracings_data_frame.groupby('FileName')['AxisLength'].idxmax()] \
         .merge(file_list_data_frame[['FileName', 'EDV']], on='FileName',
                how='inner') \
         .rename(columns={'EDV': 'Volume'})
     edv_tracings_data_frame['ESV/EDV'] = 'EDV'
-    print("len2", len(edv_tracings_data_frame)) # TODO: check unten in Methode Länge von VAL & TRAIN
     volume_tracings_data_frame = pd.concat(
         [esv_tracings_data_frame, edv_tracings_data_frame]).reset_index(drop=True)
     volume_tracings_data_frame = volume_tracings_data_frame.sort_values(
         by=['FileName', 'Frame']).reset_index(drop=True)
-    volume_tracings_data_frame['Image_FileName'] = \
+    volume_tracings_data_frame['ImageFileName'] = \
         volume_tracings_data_frame['FileName'].str.replace(r'.avi$', '') + '_' \
         + volume_tracings_data_frame['Frame'].astype(str) + '.png'
-    print(volume_tracings_data_frame[['FileName', 'Frame', 'AxisLength', 'Volume', 'ESV/EDV']])
+    # print(volume_tracings_data_frame[['FileName', 'Frame', 'AxisLength', 'Volume', 'ESV/EDV', 'X', 'Y']])
+    print(volume_tracings_data_frame[['FileName', 'Frame', 'AxisLength', 'ESV/EDV', 'PolyArea']])
 
     # split into train, validation and test data
     volume_tracings_data_frame['Split'] = ''
@@ -105,13 +134,13 @@ def get_volume_tracings(metadata_path, volumes_path, output_directory):
         # assign both frames of same video to same dataset
         if i % 2 == 0:
             if volume_tracings_data_frame.at[i, 'AxisLength'] < volume_tracings_data_frame.at[i + 1, 'AxisLength']:
-                counter_smaller += 1
+                counter_smaller += 1  # first ESV, then EDV
             else:
-                counter_bigger += 1
+                counter_bigger += 1  # first EDV, then ESV
             if (volume_tracings_data_frame.at[i, 'AxisLength'] < volume_tracings_data_frame.at[i + 1, 'AxisLength']
-                    and volume_tracings_data_frame.at[i, 'Volume'] > volume_tracings_data_frame.at[i + 1, 'Volume']
-                    or volume_tracings_data_frame.at[i, 'AxisLength'] > volume_tracings_data_frame.at[i + 1, 'AxisLength']
-                    and volume_tracings_data_frame.at[i, 'Volume'] < volume_tracings_data_frame.at[i + 1, 'Volume']):
+                    and volume_tracings_data_frame.at[i, 'Volume'] > volume_tracings_data_frame.at[i + 1, 'Volume']) \
+                    or (volume_tracings_data_frame.at[i, 'AxisLength'] > volume_tracings_data_frame.at[i + 1, 'AxisLength']
+                        and volume_tracings_data_frame.at[i, 'Volume'] < volume_tracings_data_frame.at[i + 1, 'Volume']):
                 print('Wrong assigment at index', i)
             r = random.uniform(0, 1)
             if r < 0.75:  # 75% train
@@ -123,13 +152,40 @@ def get_volume_tracings(metadata_path, volumes_path, output_directory):
             else:  # 12.5% validation
                 volume_tracings_data_frame.at[i, 'Split'] = 'VAL'
                 volume_tracings_data_frame.at[i + 1, 'Split'] = 'VAL'
+    print(volume_tracings_data_frame.groupby('Split').count())
+    print("bigger:", counter_bigger)
+    print("smaller:", counter_smaller)
     volume_tracings_data_frame.to_csv(Path(output_directory, 'FrameVolumes.csv'), index=False)
     return volume_tracings_data_frame
+
+
+def delete_incorrect_data(metadata_path, volumes_path):
+    file_list_data_frame = pd.read_csv(metadata_path, sep=',', decimal='.')
+    volume_tracings_data_frame = pd.read_csv(volumes_path, sep=',', decimal='.')
+    count = volume_tracings_data_frame.groupby(['FileName', 'Frame']).count()
+    incorrect_files_frame = count[(count > 21).any(1)]
+    incorrect_files = list(set([x[0][:-4] for x in incorrect_files_frame['X1'].to_dict().keys()]))
+    incorrect_files_avi = list(set([x[0] for x in incorrect_files_frame['X1'].to_dict().keys()]))
+    print('Number of files having too many coordinates:', len(incorrect_files))
+
+    file_list_data_frame = file_list_data_frame.set_index('FileName').drop(incorrect_files)
+    file_list_data_frame.to_csv(metadata_path)
+    volume_tracings_data_frame = volume_tracings_data_frame.set_index('FileName').drop(incorrect_files_avi)
+    volume_tracings_data_frame.to_csv(volumes_path)
 
 
 def calc_axis_length(df):
     df['AxisLength'] = ((df.X1.sub(df.X2) ** 2).add(
         df.Y1.sub(df.Y2) ** 2)) ** 0.5
+    return df
+
+
+def calc_poly_area(df):
+    # instead: iterate over dataframe and calculate it for each row separately..
+    df['PolyArea'] = 0.0
+    for i, row in df.T.iteritems():
+        polygon = Polygon(zip(row['X'], row['Y']))
+        df.at[i, 'PolyArea'] = Polygon(zip(row['X'], row['Y'])).area
     return df
 
 
