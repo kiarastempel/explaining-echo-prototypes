@@ -173,32 +173,28 @@ def calculate_distances(volume_cluster_centers, volume_cluster_borders,
                         predicting_model, extractor,
                         output_directory, similarity_measures,
                         data='test'):
-    diffs_volumes = {m: [] for m in similarity_measures}
-    diffs_features = {m: [] for m in similarity_measures}
-    diffs_images = {m: [] for m in similarity_measures}
-    vol_y = []
-    vol_predicted = []
-    # save volumes of prototype which is most similar
-    vol_prototype = {m: [] for m in similarity_measures}
-    prediction_error = []
+    ## diffs_volumes = {m: [] for m in similarity_measures}
+    ## diffs_features = {m: [] for m in similarity_measures}
+    ## diffs_images = {m: [] for m in similarity_measures}
+    ## vol_prototype = {m: [] for m in similarity_measures}
+    # save prototypes which are most similar
     chosen_prototypes = []
 
     for i in range(len(still_images)):
         print("")
         print("Instance: ", i)
         chosen_prototypes.append({})
+        chosen_prototypes[i]['file_name'] = file_names[i]
         # get predicted volume
         instance = np.expand_dims(still_images[i], axis=0)
         prediction = float(predicting_model(instance).numpy()[0][0])
-        vol_predicted.append(prediction)
         print("Predicted volume:", prediction)
         chosen_prototypes[i]['predicted_volume'] = prediction
 
         # get actual volume label
-        vol_y.append(volumes[i])
         print("Actual volume:", volumes[i])
         chosen_prototypes[i]['actual_volume'] = volumes[i]
-        prediction_error.append(abs(volumes[i] - prediction))
+        chosen_prototypes[i]['prediction_error'] = abs(volumes[i] - prediction)
 
         # get volume cluster of video by choosing corresponding ef-range (i.e. use kde-borders)
         clustered = False
@@ -232,7 +228,6 @@ def calculate_distances(volume_cluster_centers, volume_cluster_borders,
         euc_prototype, euc_index, euc_diff_features, euc_iou, euc_angle_diff, euc_volumes_diff, \
             cosine_prototype, cosine_index, cosine_diff_features, cosine_iou, cosine_angle_diff, cosine_volumes_diff = \
             prototypes_quality_videos.get_most_similar_prototypes(current_prototypes, image, volume_tracings_dict)
-        chosen_prototypes[i]['file_name'] = file_names[i]
 
         # EUCLIDEAN DISTANCE
         chosen_prototypes[i]['euclidean_prototype'] = euc_prototype.file_name
@@ -241,19 +236,12 @@ def calculate_distances(volume_cluster_centers, volume_cluster_borders,
         chosen_prototypes[i]['euclidean_features'] = euc_diff_features
         chosen_prototypes[i]['euclidean_iou'] = euc_iou
         chosen_prototypes[i]['euclidean_angle_diff'] = euc_angle_diff
-        vol_prototype[similarity_measures[0]].append(euc_prototype.ef)
-        diff_volume = abs(euc_prototype.ef - volumes[i])
-        diffs_volumes[similarity_measures[0]].append(diff_volume)
-        diff_features = np.linalg.norm(
-            [np.array(extracted_features) - np.array(euc_prototype.features)])
-        diffs_features[similarity_measures[0]].append(diff_features)
         print("Euclidean image cluster index", euc_index)
         print("Volume euclidean prototype: ", euc_prototype.ef)
         print("Euclidean diff features", euc_diff_features)
         print("Euclidean iou", euc_iou)
         print("Euclidean diff angles", euc_angle_diff)
         # euc_diff_images = np.linalg.norm([np.array(instance) - np.array(euc_prototype.video)])
-        # diffs_images[similarity_measures[0]].append(euc_diff_images)
         # print("Euclidean diff images:", euc_diff_images)
         # chosen_prototypes[i]['euclidean_images'] = euc_diff_images
 
@@ -264,11 +252,6 @@ def calculate_distances(volume_cluster_centers, volume_cluster_borders,
         chosen_prototypes[i]['cosine_features'] = cosine_diff_features
         chosen_prototypes[i]['cosine_iou'] = cosine_iou
         chosen_prototypes[i]['cosine_angle_diff'] = cosine_angle_diff
-        vol_prototype[similarity_measures[1]].append(cosine_prototype.ef)
-        diff_volume = abs(cosine_prototype.ef - volumes[i])
-        diffs_volumes[similarity_measures[1]].append(diff_volume)
-        diff_features = prototypes_quality_videos.cosine_similarity(extracted_features, [cosine_prototype.features])[0][0]
-        diffs_features[similarity_measures[1]].append(diff_features)
         print("Cosine image cluster index", cosine_index)
         print("Volume cosine prototype: ", cosine_prototype.ef)
         print("Cosine diff features", cosine_diff_features)
@@ -276,7 +259,6 @@ def calculate_distances(volume_cluster_centers, volume_cluster_borders,
         print("Cosine diff angles", cosine_angle_diff)
         # cosine_diff_images = np.linalg.norm(
         #     [np.array(instance) - np.array(cosine_prototype.video)])
-        # diffs_images[similarity_measures[0]].append(cosine_diff_images)
         # print("Cosine diff images:", cosine_diff_images)
         # chosen_prototypes[i]['cosine_images'] = cosine_diff_images
 
