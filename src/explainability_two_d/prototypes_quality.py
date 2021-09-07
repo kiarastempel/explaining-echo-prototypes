@@ -152,7 +152,6 @@ def evaluate_prototypes(volume_cluster_centers, volume_cluster_borders,
                         predicting_model, extractor,
                         output_directory, similarity_measures,
                         data='prototypes')
-    return
     calculate_distances(volume_cluster_centers, volume_cluster_borders,
                         test_still_images, test_volumes, test_filenames,
                         prototypes, volume_tracings_dict,
@@ -324,7 +323,7 @@ def compare_polygons_dtw(points_1, points_2):
     # angles_2 = angles_for_points(points_2)
     alignment = dtw(points_1, points_2, keep_internals=True)
     # alignment.plot(type="threeway")
-    print("Distance:", alignment.distance)
+    # print("Distance:", alignment.distance)
     return alignment.distance
 
 

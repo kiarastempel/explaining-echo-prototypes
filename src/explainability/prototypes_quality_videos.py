@@ -302,7 +302,7 @@ def get_most_similar_prototypes(prototypes, video, volume_tracings_dict,
         )]
         intersection_polygon = instance_polygon.intersection(prototype_polygon)
         intersection = intersection_polygon.area
-        union = prototype_polygon.area + instance_polygon.area
+        union = prototype_polygon.area + instance_polygon.area - intersection
         iou.append(-1 * (intersection / union))
 
         # angle similarity
