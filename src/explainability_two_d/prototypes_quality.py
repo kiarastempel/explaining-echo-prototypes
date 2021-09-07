@@ -233,9 +233,9 @@ def calculate_distances(volume_cluster_centers, volume_cluster_borders,
         chosen_prototypes[i]['euclidean_prototype'] = euc_prototype.file_name
         chosen_prototypes[i]['euclidean_volume'] = euc_prototype.ef
         chosen_prototypes[i]['euclidean_diff_volumes'] = euc_volumes_diff
-        chosen_prototypes[i]['euclidean_features'] = euc_diff_features
+        chosen_prototypes[i]['euclidean_diff_features'] = euc_diff_features
         chosen_prototypes[i]['euclidean_iou'] = euc_iou
-        chosen_prototypes[i]['euclidean_angle_diff'] = euc_angle_diff
+        chosen_prototypes[i]['euclidean_diff_angles'] = euc_angle_diff
         print("Euclidean image cluster index", euc_index)
         print("Volume euclidean prototype: ", euc_prototype.ef)
         print("Euclidean diff features", euc_diff_features)
@@ -243,15 +243,15 @@ def calculate_distances(volume_cluster_centers, volume_cluster_borders,
         print("Euclidean diff angles", euc_angle_diff)
         # euc_diff_images = np.linalg.norm([np.array(instance) - np.array(euc_prototype.video)])
         # print("Euclidean diff images:", euc_diff_images)
-        # chosen_prototypes[i]['euclidean_images'] = euc_diff_images
+        # chosen_prototypes[i]['euclidean_diff_images'] = euc_diff_images
 
         # COSINE SIMILARITY (close to 1 indicates higher similarity)
         chosen_prototypes[i]['cosine_prototype'] = cosine_prototype.file_name
         chosen_prototypes[i]['cosine_volume'] = cosine_prototype.ef
         chosen_prototypes[i]['cosine_diff_volumes'] = cosine_volumes_diff
-        chosen_prototypes[i]['cosine_features'] = cosine_diff_features
+        chosen_prototypes[i]['cosine_diff_features'] = cosine_diff_features
         chosen_prototypes[i]['cosine_iou'] = cosine_iou
-        chosen_prototypes[i]['cosine_angle_diff'] = cosine_angle_diff
+        chosen_prototypes[i]['cosine_diff_angles'] = cosine_angle_diff
         print("Cosine image cluster index", cosine_index)
         print("Volume cosine prototype: ", cosine_prototype.ef)
         print("Cosine diff features", cosine_diff_features)
@@ -260,33 +260,32 @@ def calculate_distances(volume_cluster_centers, volume_cluster_borders,
         # cosine_diff_images = np.linalg.norm(
         #     [np.array(instance) - np.array(cosine_prototype.video)])
         # print("Cosine diff images:", cosine_diff_images)
-        # chosen_prototypes[i]['cosine_images'] = cosine_diff_images
+        # chosen_prototypes[i]['cosine_diff_images'] = cosine_diff_images
 
         continue
         # STRUCTURAL SIMILARITY (close to 1 indicates higher similarity)
         prototype, prototype_index = prototypes_quality_videos.get_most_similar_prototype_ssim(
             current_prototypes, image, features=use_features)
         chosen_prototypes[i]['ssim_prototype'] = prototype.file_name
-        print("SSIM image cluster index", prototype_index)
-        print("Volume prototype: ", prototype.ef)
         chosen_prototypes[i]['ssim_volume'] = prototype.ef
-        vol_prototype[similarity_measures[2]].append(prototype.ef)
-        diff_volume = abs(prototype.ef - volumes[i])
-        diffs_volumes[similarity_measures[2]].append(diff_volume)
+        chosen_prototypes[i]['ssim_diff_volumes'] = abs(prototype.ef - volumes[i])
         diff_features = prototypes_quality_videos.structural_similarity(
             np.array(extracted_features[0]).astype('float64'), np.array(prototype.features),
             gaussian_weights=True, sigma=1.5, use_sample_covariance=False)
-        diffs_features[similarity_measures[2]].append(diff_features)
-        chosen_prototypes[i]['ssim_features'] = diff_features
-        # print(instance.shape)
-        # print(prototype.video.shape)
-        # diff_images = prototypes_quality_videos.structural_similarity(
+        chosen_prototypes[i]['ssim_diff_features'] = diff_features
+        chosen_prototypes[i]['ssim_iou'] = 0
+        chosen_prototypes[i]['ssim_diff_angles'] = 0
+        print("SSIM image cluster index", prototype_index)
+        print("SSIM cosine prototype: ", prototype.ef)
+        print("SSIM diff features", diff_features)
+        print("SSIM iou", "not calculated")
+        print("SSIM diff angles", "not calculated")
+        # SSIM_diff_images = prototypes_quality_videos.structural_similarity(
         #     np.array(np.array(instance[0])), np.array(prototype.video),
         #     gaussian_weights=True, sigma=1.5, use_sample_covariance=False,
         #     multichannel=True)
-        # diffs_images[similarity_measures[2]].append(diff_images)
-        # print("Sim:", diff_images)
-        # chosen_prototypes[i]['ssim_images'] = diff_images
+        # print("SSIM diff images:", SSIM_diff_images)
+        # chosen_prototypes[i]['ssim_diff_images'] = SSIM_diff_images
 
         continue
         # PEAK-SIGNAL-TO-NOISE RATIO (higher is better)
@@ -294,30 +293,29 @@ def calculate_distances(volume_cluster_centers, volume_cluster_borders,
         prototype, prototype_index = prototypes_quality_videos.get_most_similar_prototype_psnr(
             current_prototypes, image, features=use_features)
         chosen_prototypes[i]['psnr_prototype'] = prototype.file_name
-        vol_prototype[similarity_measures[3]].append(prototype.ef)
-        diff_volume = abs(prototype.ef - volumes[i])
-        diffs_volumes[similarity_measures[3]].append(diff_volume)
+        chosen_prototypes[i]['psnr_volume'] = prototype.ef
+        chosen_prototypes[i]['psnr_diff_volumes'] = abs(prototype.ef - volumes[i])
         diff_features = prototypes_quality_videos.peak_signal_noise_ratio(
             np.array(extracted_features[0]), np.array(prototype.features),
             data_range=max(np.array(extracted_features[0])) - min(
                 np.array(extracted_features[0])))
-        diffs_features[similarity_measures[3]].append(diff_features)
-        # diff_images = prototypes_quality_videos.peak_signal_noise_ratio(
+        chosen_prototypes[i]['psnr_diff_features'] = diff_features
+        chosen_prototypes[i]['psnr_iou'] = 0
+        chosen_prototypes[i]['psnr_diff_angles'] = 0
+        print("PSNR image cluster index", prototype_index)
+        print("PSNR cosine prototype: ", prototype.ef)
+        print("PSNR diff features", diff_features)
+        print("PSNR iou", "not calculated")
+        print("PSNR diff angles", "not calculated")
+        # PSNR_diff_images = prototypes_quality_videos.peak_signal_noise_ratio(
         #     np.array(instance).flatten(), np.array(prototype.video).flatten(),
         #     data_range=max(np.array(instance)) - min(np.array(instance)))
-        # diffs_images[similarity_measures[3]].append(diff_images)
+        # print("SSIM diff images:", SSIM_diff_images)
+        # chosen_prototypes[i]['psnr_diff_images'] = SSIM_diff_images
 
-    for sim in similarity_measures:
-        prototypes_quality_videos.save_distances(output_directory, data, sim, diffs_volumes[sim], 'volume')
-        prototypes_quality_videos.save_distances(output_directory, data, sim, diffs_features[sim], 'features')
-        # prototypes_quality_videos.save_distances(output_directory, data, sim, diffs_images[sim], 'images')
     cp = pd.DataFrame(chosen_prototypes)
     prototypes_path = Path(output_directory, data + '_chosen_prototypes.csv')
     cp.to_csv(prototypes_path, index=False)
-
-    with open(Path(output_directory, data + '_prediction_error.txt'), 'w') as txt_file:
-        for e in prediction_error:
-            txt_file.write(str(e) + "\n")
 
 
 def compare_polygons_dtw(points_1, points_2):
