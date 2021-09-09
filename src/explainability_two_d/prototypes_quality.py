@@ -60,21 +60,21 @@ def main():
     volume_tracings_dict = volume_tracings_data_frame.to_dict(orient='index')
     prototypes = rh.read_prototypes(Path(output_directory, args.prototypes_filename), frame_volumes_path)
     prototypes = rh.get_segmentation_coordinates_of_prototypes(prototypes, volume_tracings_dict)
-    for i in range(len(prototypes)):
-        for j in range(len(prototypes[i])):
-            points = zip(prototypes[i][j].segmentation['X'],
-                         prototypes[i][j].segmentation['Y'])
-            # points = [list(x) for x in points]
-            # points.sort(key=lambda x: math.atan2(x[1] - 0, x[0] - 0))
-            poly = Polygon(points)
-            if not poly.exterior.is_valid:
-                print(prototypes[i][j].file_name)
-                print(poly.is_valid)
-                x, y = poly.exterior.xy
-                plt.plot(x, y)
-                for k in range(len(x)):
-                    plt.annotate(k, (x[k], y[k]))
-                plt.show()
+    # for i in range(len(prototypes)):
+    #     for j in range(len(prototypes[i])):
+    #         points = zip(prototypes[i][j].segmentation['X'],
+    #                      prototypes[i][j].segmentation['Y'])
+    #         # points = [list(x) for x in points]
+    #         # points.sort(key=lambda x: math.atan2(x[1] - 0, x[0] - 0))
+    #         poly = Polygon(points)
+    #         if not poly.exterior.is_valid:
+    #             print(prototypes[i][j].file_name)
+    #             print(poly.is_valid)
+    #             x, y = poly.exterior.xy
+    #             plt.plot(x, y)
+    #             for k in range(len(x)):
+    #                 plt.annotate(k, (x[k], y[k]))
+    #             plt.show()
     print('Prototype polygons saved')
 
     # get train/validation/test data
@@ -321,10 +321,15 @@ def compare_polygons_dtw(points_1, points_2):
     # using HMM Similarity Paper etc.
     # angles_1 = angles_for_points(points_1)
     # angles_2 = angles_for_points(points_2)
-    alignment = dtw(points_1, points_2, keep_internals=True)
+    min_align_distance = dtw(points_1, points_2, keep_internals=True).distance
+    for i in range(len(points_1)):
+        points_1 = points_1[i:] + points_1[:i]
+        alignment = dtw(points_1, points_2, keep_internals=True)
+        if alignment.distance < min_align_distance:
+            min_align_distance = alignment.distance
     # alignment.plot(type="threeway")
-    # print("Distance:", alignment.distance)
-    return alignment.distance
+    # print("Distance:", min_align_distance)
+    return min_align_distance
 
 
 def compare_angles(points_1, points_2):
@@ -336,6 +341,7 @@ def compare_angles(points_1, points_2):
     return diff
 
 
+# source for idea: https://stackoverflow.com/questions/30271926/python-algorithm-how-to-do-simple-geometry-shape-match
 def angles_for_points(points):
     def vector(tail, head):
         return tuple(h - t for h, t in zip(head, tail))
