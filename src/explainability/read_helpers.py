@@ -1,15 +1,18 @@
 import pandas as pd
+import numpy as np
 import ast
+from prototypes_quality import normalize_polygon, rotate_polygon, angles_to_centroid
 
 
 class Video:
-    def __init__(self, features, ef, file_name, video=None, segmentation=None):
+    def __init__(self, features, ef, file_name, video=None, segmentation=None, normalized_rotations=[]):
         self.features = features
         self.ef = ef
         self.file_name = file_name
         self.video = video
         # segmentation: {'X': list of coordinates, 'Y': list of coordinates}
         self.segmentation = segmentation
+        self.normalized_rotations = normalized_rotations
 
 
 def read_cluster_labels(cluster_file):
@@ -167,5 +170,28 @@ def get_segmentation_coordinates_of_prototypes(prototypes, volume_tracings_dict)
             file_name = prototypes[i][j].file_name
             prototypes[i][j].segmentation = {'X': ast.literal_eval(volume_tracings_dict[file_name]['X']),
                                              'Y': ast.literal_eval(volume_tracings_dict[file_name]['Y'])}
+    return prototypes
+
+
+def get_normalized_rotations_of_prototypes_with_angles(prototypes, rotation_extent, num_rotations):
+    for i in range(len(prototypes)):
+        for j in range(len(prototypes[i])):
+            rotated_features = []
+            points = [list(x) for x in zip(prototypes[i][j].segmentation['X'],
+                                           prototypes[i][j].segmentation['Y'])]
+
+            normalized_points = normalize_polygon(np.array(points))
+            center = np.array([np.mean([x[0] for x in normalized_points]),
+                               np.mean([x[1] for x in normalized_points])])
+
+            for angle in np.linspace(-rotation_extent, rotation_extent, num=num_rotations, endpoint=True):
+                rotated_points = list(normalize_polygon(rotate_polygon(normalized_points, center, angle)))
+                rotated_angles = list(angles_to_centroid(rotated_points, center))
+                features = [
+                    [rotated_points[i][0], rotated_points[i][1],
+                     rotated_angles[i]] for i in range(len(points))
+                ]
+                rotated_features.append(features)
+            prototypes[i][j].normalized_rotations = rotated_features
     return prototypes
 

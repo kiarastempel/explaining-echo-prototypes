@@ -296,10 +296,6 @@ def get_most_similar_prototypes(prototypes, video, volume_tracings_dict,
             prototypes[i].segmentation['X'],
             prototypes[i].segmentation['Y']
         ))
-        prototype_points = [list(x) for x in zip(
-            prototypes[i].segmentation['X'],
-            prototypes[i].segmentation['Y']
-        )]
         intersection_polygon = instance_polygon.intersection(prototype_polygon)
         intersection = intersection_polygon.area
         union = prototype_polygon.area + instance_polygon.area - intersection
@@ -307,7 +303,7 @@ def get_most_similar_prototypes(prototypes, video, volume_tracings_dict,
 
         # angle similarity
         #angle_diff.append(pq.compare_polygons_dtw(instance_points, prototype_points))
-        angle_diff.append(pq.compare_polygons_rotation_translation_invariant(prototype_points, instance_points))
+        angle_diff.append(pq.compare_polygons_rotation_translation_invariant(prototype, instance_points))
 
         # volume similarity
         volumes_diff.append(abs(prototype.ef - video.ef))

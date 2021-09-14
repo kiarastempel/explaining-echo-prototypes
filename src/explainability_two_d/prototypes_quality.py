@@ -16,7 +16,6 @@ from explainability import prototypes_quality_videos
 from prototypes_calculation import get_images_of_prototypes
 from two_D_resnet import get_data
 
-
 def main():
     # os.environ["CUDA_VISIBLE_DEVICES"] = str(2)
 
@@ -27,6 +26,8 @@ def main():
                         help="Directory to save prototypes and evaluations in")
     parser.add_argument('-p', '--prototypes_filename', default='prototypes.txt',
                         help='Name of file containing prototypes')
+    parser.add_argument('-re', '--rotation_extent', type=float, default=np.pi/8)
+    parser.add_argument('-nr', '--num_rotations', type=int, default=9)
     parser.add_argument('-fv', '--frame_volumes_filename',
                         default='FrameVolumes.csv',
                         help='Name of the file containing frame volumes.')
@@ -62,6 +63,8 @@ def main():
     volume_tracings_dict = volume_tracings_data_frame.to_dict(orient='index')
     prototypes = rh.read_prototypes(Path(output_directory, args.prototypes_filename), frame_volumes_path)
     prototypes = rh.get_segmentation_coordinates_of_prototypes(prototypes, volume_tracings_dict)
+    prototypes = rh.get_normalized_rotations_of_prototypes_with_angles(
+        prototypes, args.rotation_extent, args.num_rotations)
     # for i in range(len(prototypes)):
     #     for j in range(len(prototypes[i])):
     #         points = zip(prototypes[i][j].segmentation['X'],
@@ -77,6 +80,15 @@ def main():
     #             for k in range(len(x)):
     #                 plt.annotate(k, (x[k], y[k]))
     #             plt.show()
+
+    # just for testing
+    # print(prototypes[7][3].normalized_rotations)
+    # points_2 = [list(x) for x in zip(prototypes[8][1].segmentation['X'],
+    #                                  prototypes[8][1].segmentation['Y'])]
+    # # dist = compare_polygons_dtw(points_1, points_2)
+    # # print("One dtw dist", dist)
+    #
+    # compare_polygons_rotation_translation_invariant(prototypes[8][1], points_2)
 
     print('Prototype polygons saved')
 
@@ -322,53 +334,33 @@ def calculate_distances(volume_cluster_centers, volume_cluster_borders,
 
 # compare two polygons whereas first polygon is rotated from -90 to 90 degree
 # and each point of it is used as starting point for dtw once
-def compare_polygons_rotation_translation_invariant(points_1, points_2,
-                                                    rotation_extent=np.pi/8,
-                                                    num_rotations=9):
+def compare_polygons_rotation_translation_invariant(prototype, instance_points,
+                                                    rotation_extent=np.pi/8):
     print("Start Comparing")
-    p_1 = np.array(points_1)
-    p_2 = np.array(points_2)
-    # normalize points of both polygons
+    instance_p = normalize_polygon(np.array(instance_points))
+    instance_center = np.array([np.mean([x[0] for x in instance_p]),
+                                np.mean([x[1] for x in instance_p])])
+    instance_angles = list(angles_to_centroid(instance_p, instance_center))
+    instance_features = [[instance_p[i][0], instance_p[i][1], instance_angles[i]] for i in range(len(instance_points))]
+    min_dist = compare_polygons_dtw(prototype.normalized_rotations[0], instance_features)
+    print("dist", min_dist)
+    min_angle = -rotation_extent
     start = datetime.datetime.now()
-    p_1 = normalize_polygon(p_1)
-    p_2 = normalize_polygon(p_2)
-    end = datetime.datetime.now()
-    print("Normalizing done", end - start)
-    points_2 = list(p_2)
-    #plt.plot(*p_1.T)  # plot polygon to be rotated
-    #plt.plot(*p_2.T, lw=4, color='b')  # plot polygon for comparison
-    center_1 = np.array([np.mean([x[0] for x in p_1]),
-                         np.mean([x[1] for x in p_1])])
-    center_2 = np.array([np.mean([x[0] for x in p_2]),
-                         np.mean([x[1] for x in p_2])])
-    angles_1 = list(angles_to_centroid(points_1, center_1))
-    angles_2 = list(angles_to_centroid(points_2, center_2))
-    points_1 = [[points_1[i][0], points_1[i][1], angles_1[i]] for i in range(len(points_1))]
-    points_2 = [[points_2[i][0], points_2[i][1], angles_2[i]] for i in range(len(points_2))]
-    min_dist = compare_polygons_dtw(points_1, points_2)
-    min_angle = 0
-    start = datetime.datetime.now()
-    for angle in np.linspace(-rotation_extent, rotation_extent, num=num_rotations, endpoint=True):
-        rotated_p_1 = rotate_polygon(p_1, center_1, angle)
-        rotated_p_1 = normalize_polygon(rotated_p_1)
-        rotated_points_1 = list(rotated_p_1)
-        rotated_angles_1 = list(angles_to_centroid(rotated_points_1, center_1))
-        #print("ang", rotated_angles_1)
-        rotated_points_1 = [[rotated_points_1[i][0], rotated_points_1[i][1], rotated_angles_1[i]] for i in range(len(points_1))]
-        dist = compare_polygons_dtw(rotated_points_1, points_2)
+    for prototype_rotation_features in prototype.normalized_rotations:
+        dist = compare_polygons_dtw(prototype_rotation_features, instance_features)
         if dist < min_dist:
             min_dist = dist
-            min_angle = angle
+            #min_angle = angle
         #plt.plot(*rotated_p_1.T)  # plot current rotation of polygon
     end = datetime.datetime.now()
     print("Overall rotation", end - start)
-    min_p_1 = rotate_polygon(p_1, center_1, min_angle)
-    min_p_1 = normalize_polygon(min_p_1)
+    #min_p_1 = rotate_polygon(p_1, center_1, min_angle)
+    #min_p_1 = normalize_polygon(min_p_1)
     # plt.plot(*min_p_1.T, lw=4, color='k')
     # plt.grid(True)
     # plt.show()
     # print("Overall multiple rotated sim", min_dist)
-    print("Min angle", min_angle, "with dist", min_dist)
+    print("Min angle", "with dist", min_dist)
     return min_dist
 
 
@@ -390,10 +382,10 @@ def normalize_polygon(points):
     # is at (0,0), then normalize by dividing by std_y
     # x' = (x - mean_x) / std_y
     # y' = (y - mean_y) / std_y
-    mean_x = np.mean([p[0] for p in points])
-    mean_y = np.mean([p[1] for p in points])
+    mean = np.array([np.mean([x[0] for x in points]),
+                     np.mean([x[1] for x in points])])
     std_y = np.std([p[1] for p in points])
-    points = (points - np.array([mean_x, mean_y])) / std_y
+    points = (points - mean) / std_y
     # print("std x", np.std([p[0] for p in points]))
     # print("std y", np.std([p[1] for p in points]))
     return points
