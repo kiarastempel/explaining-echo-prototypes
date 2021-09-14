@@ -267,7 +267,7 @@ def save_metadata(diffs, output_file):
 
 
 def get_most_similar_prototypes(prototypes, video, volume_tracings_dict,
-                                weights=[1.0, 0.0, 0.0, 0.0]): # [0.4, 0.2, 0.2, 0.2]
+                                weights=[0.0, 0.0, 1.0, 0.0]): # [0.4, 0.2, 0.2, 0.2]
     # get polygon of current instance
     instance_polygon = Polygon(zip(
         ast.literal_eval(volume_tracings_dict[video.file_name]['X']),
@@ -306,7 +306,8 @@ def get_most_similar_prototypes(prototypes, video, volume_tracings_dict,
         iou.append(-1 * (intersection / union))
 
         # angle similarity
-        angle_diff.append(pq.compare_polygons_dtw(instance_points, prototype_points))
+        #angle_diff.append(pq.compare_polygons_dtw(instance_points, prototype_points))
+        angle_diff.append(pq.compare_polygons_rotation_translation_invariant(prototype_points, instance_points))
 
         # volume similarity
         volumes_diff.append(abs(prototype.ef - video.ef))

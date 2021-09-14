@@ -1,4 +1,6 @@
+from __future__ import division  # to avoid integer devision problem
 import argparse
+import datetime
 import os
 import math
 import numpy as np
@@ -75,6 +77,7 @@ def main():
     #             for k in range(len(x)):
     #                 plt.annotate(k, (x[k], y[k]))
     #             plt.show()
+
     print('Prototype polygons saved')
 
     # get train/validation/test data
@@ -317,10 +320,91 @@ def calculate_distances(volume_cluster_centers, volume_cluster_borders,
     cp.to_csv(prototypes_path, index=False)
 
 
+# compare two polygons whereas first polygon is rotated from -90 to 90 degree
+# and each point of it is used as starting point for dtw once
+def compare_polygons_rotation_translation_invariant(points_1, points_2,
+                                                    rotation_extent=np.pi/8,
+                                                    num_rotations=9):
+    print("Start Comparing")
+    p_1 = np.array(points_1)
+    p_2 = np.array(points_2)
+    # normalize points of both polygons
+    start = datetime.datetime.now()
+    p_1 = normalize_polygon(p_1)
+    p_2 = normalize_polygon(p_2)
+    end = datetime.datetime.now()
+    print("Normalizing done", end - start)
+    points_2 = list(p_2)
+    #plt.plot(*p_1.T)  # plot polygon to be rotated
+    #plt.plot(*p_2.T, lw=4, color='b')  # plot polygon for comparison
+    center_1 = np.array([np.mean([x[0] for x in p_1]),
+                         np.mean([x[1] for x in p_1])])
+    center_2 = np.array([np.mean([x[0] for x in p_2]),
+                         np.mean([x[1] for x in p_2])])
+    angles_1 = list(angles_to_centroid(points_1, center_1))
+    angles_2 = list(angles_to_centroid(points_2, center_2))
+    points_1 = [[points_1[i][0], points_1[i][1], angles_1[i]] for i in range(len(points_1))]
+    points_2 = [[points_2[i][0], points_2[i][1], angles_2[i]] for i in range(len(points_2))]
+    min_dist = compare_polygons_dtw(points_1, points_2)
+    min_angle = 0
+    start = datetime.datetime.now()
+    for angle in np.linspace(-rotation_extent, rotation_extent, num=num_rotations, endpoint=True):
+        rotated_p_1 = rotate_polygon(p_1, center_1, angle)
+        rotated_p_1 = normalize_polygon(rotated_p_1)
+        rotated_points_1 = list(rotated_p_1)
+        rotated_angles_1 = list(angles_to_centroid(rotated_points_1, center_1))
+        #print("ang", rotated_angles_1)
+        rotated_points_1 = [[rotated_points_1[i][0], rotated_points_1[i][1], rotated_angles_1[i]] for i in range(len(points_1))]
+        dist = compare_polygons_dtw(rotated_points_1, points_2)
+        if dist < min_dist:
+            min_dist = dist
+            min_angle = angle
+        #plt.plot(*rotated_p_1.T)  # plot current rotation of polygon
+    end = datetime.datetime.now()
+    print("Overall rotation", end - start)
+    min_p_1 = rotate_polygon(p_1, center_1, min_angle)
+    min_p_1 = normalize_polygon(min_p_1)
+    # plt.plot(*min_p_1.T, lw=4, color='k')
+    # plt.grid(True)
+    # plt.show()
+    # print("Overall multiple rotated sim", min_dist)
+    print("Min angle", min_angle, "with dist", min_dist)
+    return min_dist
+
+
+# rotate points about center point by angle using rotation matrix
+# first subtract center (translate), then rotate about (0,0) and
+# add center again (untranslate)
+def rotate_polygon(points, center, angle=np.pi/4):
+    rotated_points = np.dot(
+        points - center,
+        np.array([[np.cos(angle), np.sin(angle)],
+                  [-np.sin(angle), np.cos(angle)]])
+    ) + center
+    return rotated_points
+
+
+def normalize_polygon(points):
+    # scale points (x,y) of polygon:
+    # translate using polygon mean, i.e. translate such that center of polygon
+    # is at (0,0), then normalize by dividing by std_y
+    # x' = (x - mean_x) / std_y
+    # y' = (y - mean_y) / std_y
+    mean_x = np.mean([p[0] for p in points])
+    mean_y = np.mean([p[1] for p in points])
+    std_y = np.std([p[1] for p in points])
+    points = (points - np.array([mean_x, mean_y])) / std_y
+    # print("std x", np.std([p[0] for p in points]))
+    # print("std y", np.std([p[1] for p in points]))
+    return points
+
+
+# compare lists of points of two polygons using dtw
+# whereas each point of first polygon is used as starting point once
 def compare_polygons_dtw(points_1, points_2):
     # using HMM Similarity Paper etc.
-    # angles_1 = angles_for_points(points_1)
-    # angles_2 = angles_for_points(points_2)
+    angles_1 = angles_to_adjacent_edge(points_1)
+    angles_2 = angles_to_adjacent_edge(points_2)
     min_align_distance = dtw(points_1, points_2, keep_internals=True).distance
     for i in range(len(points_1)):
         points_1 = points_1[i:] + points_1[:i]
@@ -332,9 +416,10 @@ def compare_polygons_dtw(points_1, points_2):
     return min_align_distance
 
 
+# compare angles of two polygons (just one by one)
 def compare_angles(points_1, points_2):
-    angles_1 = angles_for_points(points_1)
-    angles_2 = angles_for_points(points_2)
+    angles_1 = angles_to_adjacent_edge(points_1)
+    angles_2 = angles_to_adjacent_edge(points_2)
     diff = 0
     for i in range(min(len(angles_1), len(angles_2))):
         diff = diff + abs(angles_1[i] - angles_2[i])
@@ -342,11 +427,11 @@ def compare_angles(points_1, points_2):
 
 
 # source for idea: https://stackoverflow.com/questions/30271926/python-algorithm-how-to-do-simple-geometry-shape-match
-def angles_for_points(points):
+def angles_to_adjacent_edge(points):
     def vector(tail, head):
         return tuple(h - t for h, t in zip(head, tail))
 
-    points = points[:] + points[0:2]
+    points = points[:] + points[0:2]  # repeat first two points at end
     angles = []
     for p0, p1, p2 in zip(points, points[1:], points[2:]):
         v0 = vector(tail=p0, head=p1)
@@ -357,6 +442,22 @@ def angles_for_points(points):
         if angle < 0:
             angle += 2 * math.pi
         angles.append(angle)
+    return angles
+
+
+def angles_to_centroid(points, center):
+    pts = np.array([np.array(p) for p in points])
+    center = np.array(center)
+    angles = []
+    for p_1 in pts:
+        p_2 = np.array(p_1[0], center[1])
+
+        cp_1 = p_1 - center
+        cp_2 = p_2 - center
+
+        cosine = np.dot(cp_1, cp_2) / (np.linalg.norm(cp_1) * np.linalg.norm(cp_2))
+        angle = np.arccos(cosine)
+        angles.append(angle)  # np.degrees(angle)
     return angles
 
 
