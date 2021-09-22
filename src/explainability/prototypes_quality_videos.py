@@ -267,7 +267,7 @@ def save_metadata(diffs, output_file):
 
 
 def get_most_similar_prototypes(prototypes, video, volume_tracings_dict,
-                                weights=[0.0, 0.0, 1.0, 0.0]): # [0.4, 0.2, 0.2, 0.2]
+                                weights=[0.5, 0.0, 0.5]): # [0.4, 0.2, 0.2]
     # get polygon of current instance
     instance_polygon = Polygon(zip(
         ast.literal_eval(volume_tracings_dict[video.file_name]['X']),
@@ -284,7 +284,6 @@ def get_most_similar_prototypes(prototypes, video, volume_tracings_dict,
     cosine_feature_diff = []
     iou = []
     angle_diff = []
-    volumes_diff = []
     i = 0
     for prototype in prototypes:
         # feature similarity
@@ -302,28 +301,30 @@ def get_most_similar_prototypes(prototypes, video, volume_tracings_dict,
         iou.append(-1 * (intersection / union))
 
         # angle similarity
-        #angle_diff.append(pq.compare_polygons_dtw(instance_points, prototype_points))
+        # angle_diff.append(pq.compare_polygons_multiple_dtw(instance_points, prototype_points))
+
+        # shape similarity using normalized coordinates and rotations
         angle_diff.append(pq.compare_polygons_rotation_translation_invariant(prototype, instance_points))
 
-        # volume similarity
-        volumes_diff.append(abs(prototype.ef - video.ef))
+        # shape similarity using arc lengths angles of adjacent edges
+        # angle_diff.append(pq.compare_polygons_with_lengths_and_angles(prototype, instance_points))
 
         i += 1
     # standardize
     transformer = StandardScaler()
-    euc_index = get_most_similar_prototype_index(euc_feature_diff, iou, angle_diff, volumes_diff, transformer, weights)
-    cosine_index = get_most_similar_prototype_index(cosine_feature_diff, iou, angle_diff, volumes_diff, transformer, weights)
-    return prototypes[euc_index], euc_index, euc_feature_diff[euc_index], -1 * iou[euc_index], angle_diff[euc_index], volumes_diff[euc_index], \
-           prototypes[cosine_index], cosine_index, -1 * cosine_feature_diff[cosine_index], -1 * iou[cosine_index], angle_diff[cosine_index], volumes_diff[cosine_index]
+    euc_index = get_most_similar_prototype_index(euc_feature_diff, iou, angle_diff, transformer, weights)
+    cosine_index = get_most_similar_prototype_index(cosine_feature_diff, iou, angle_diff, transformer, weights)
+    return prototypes[euc_index], euc_index, euc_feature_diff[euc_index], -1 * iou[euc_index], angle_diff[euc_index], \
+           prototypes[cosine_index], cosine_index, -1 * cosine_feature_diff[cosine_index], -1 * iou[cosine_index], angle_diff[cosine_index]
 
 
-def get_most_similar_prototype_index(feature_diff, iou, angle_diff, volumes_diff, transformer,
+def get_most_similar_prototype_index(feature_diff, iou, angle_diff, transformer,
                                      weights):
-    evaluation = [list(x) for x in zip(feature_diff, iou, angle_diff, volumes_diff)]
+    evaluation = [list(x) for x in zip(feature_diff, iou, angle_diff)]
     # print('eval', evaluation)
     eval_ft = transformer.fit_transform(evaluation)
     # print('eval normed', eval_ft)
-    weighted_sum = [weights[0] * x[0] + weights[1] * x[1] + weights[2] * x[2] + weights[3] * x[3] for x in eval_ft]
+    weighted_sum = [weights[0] * x[0] + weights[1] * x[1] + weights[2] * x[2] for x in eval_ft]
     # print('weighted sum', weighted_sum)
     # get index of prototype with minimum difference
     most_similar_index = weighted_sum.index(min(weighted_sum))
