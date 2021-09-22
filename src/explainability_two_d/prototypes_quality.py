@@ -54,7 +54,6 @@ def main():
     else:
         output_directory = Path(args.output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
-    output_directory.mkdir(parents=True, exist_ok=True)
     frame_volumes_path = Path(args.input_directory, args.frame_volumes_filename)
 
     # get prototypes and corresponding segmentation coordinates
@@ -82,13 +81,29 @@ def main():
     #             plt.show()
 
     # just for testing
-    # print(prototypes[7][3].normalized_rotations)
-    # points_2 = [list(x) for x in zip(prototypes[8][1].segmentation['X'],
-    #                                  prototypes[8][1].segmentation['Y'])]
-    # # dist = compare_polygons_dtw(points_1, points_2)
-    # # print("One dtw dist", dist)
+    # points_1 = [list(x) for x in zip(prototypes[5][0].segmentation['X'],
+    #                                  prototypes[5][0].segmentation['Y'])]
+    # points_2 = [list(x) for x in zip(prototypes[9][3].segmentation['X'],
+    #                                  prototypes[9][3].segmentation['Y'])]
+    # print("dist", compare_polygons_with_lengths_and_angles(prototypes[5][0], points_2))
     #
-    # compare_polygons_rotation_translation_invariant(prototypes[8][1], points_2)
+    # p_1 = list(normalize_polygon(np.array(points_1)))
+    # p_2 = list(normalize_polygon(np.array(points_2)))
+    # p1_center = np.array(np.mean(p_1, axis=0))
+    # p1_angles = list(angles_to_centroid(p_1, p1_center))
+    # p1_features = [[p_1[i][0], p_1[i][1], p1_angles[i]] for i in range(len(p_1))]
+    # p2_center = np.array(np.mean(p_2, axis=0))
+    # p2_angles = list(angles_to_centroid(p_2, p2_center))
+    # p2_features = [[p_2[i][0], p_2[i][1], p2_angles[i]] for i in range(len(p_2))]
+    #
+    # dist_1 = dtw(p1_features, p2_features).distance
+    # print("dist 1", dist_1)
+    #
+    # dist = compare_polygons_multiple_dtw(p1_features, p2_features)
+    # print("dist x", dist)
+    #
+    # dist_rot = compare_polygons_rotation_translation_invariant(prototypes[5][0], points_2)
+    # print("dist rot", dist_rot)
 
     print('Prototype polygons saved')
 
@@ -239,14 +254,14 @@ def calculate_distances(volume_cluster_centers, volume_cluster_borders,
         # get most similar prototype of ef cluster
         # calculate distances/similarities
 
-        euc_prototype, euc_index, euc_diff_features, euc_iou, euc_angle_diff, euc_volumes_diff, \
-            cosine_prototype, cosine_index, cosine_diff_features, cosine_iou, cosine_angle_diff, cosine_volumes_diff = \
+        euc_prototype, euc_index, euc_diff_features, euc_iou, euc_angle_diff, \
+            cosine_prototype, cosine_index, cosine_diff_features, cosine_iou, cosine_angle_diff = \
             prototypes_quality_videos.get_most_similar_prototypes(current_prototypes, image, volume_tracings_dict)
 
         # EUCLIDEAN DISTANCE
         chosen_prototypes[i]['euclidean_prototype'] = euc_prototype.file_name
         chosen_prototypes[i]['euclidean_volume'] = euc_prototype.ef
-        chosen_prototypes[i]['euclidean_diff_volumes'] = euc_volumes_diff
+        chosen_prototypes[i]['euclidean_diff_volumes'] = abs(euc_prototype.ef - volumes[i])
         chosen_prototypes[i]['euclidean_diff_features'] = euc_diff_features
         chosen_prototypes[i]['euclidean_iou'] = euc_iou
         chosen_prototypes[i]['euclidean_diff_angles'] = euc_angle_diff
@@ -262,7 +277,7 @@ def calculate_distances(volume_cluster_centers, volume_cluster_borders,
         # COSINE SIMILARITY (close to 1 indicates higher similarity)
         chosen_prototypes[i]['cosine_prototype'] = cosine_prototype.file_name
         chosen_prototypes[i]['cosine_volume'] = cosine_prototype.ef
-        chosen_prototypes[i]['cosine_diff_volumes'] = cosine_volumes_diff
+        chosen_prototypes[i]['cosine_diff_volumes'] = abs(cosine_prototype.ef - volumes[i])
         chosen_prototypes[i]['cosine_diff_features'] = cosine_diff_features
         chosen_prototypes[i]['cosine_iou'] = cosine_iou
         chosen_prototypes[i]['cosine_diff_angles'] = cosine_angle_diff
@@ -332,35 +347,50 @@ def calculate_distances(volume_cluster_centers, volume_cluster_borders,
     cp.to_csv(prototypes_path, index=False)
 
 
+def compare_polygons_with_lengths_and_angles(prototype, instance_points):
+    prototype_points = [list(x) for x in zip(prototype.segmentation['X'],
+                                             prototype.segmentation['Y'])]
+    prototype_p = list(normalize_polygon(np.array(prototype_points)))
+    prototype_angles = angles_to_adjacent_edge(prototype_p)
+    prototype_edge_lengths = calculate_edges_lengths(prototype_p)
+    prototype_features = list(zip(prototype_angles, prototype_edge_lengths))
+
+    instance_p = list(normalize_polygon(np.array(instance_points)))
+    instance_angles = angles_to_adjacent_edge(instance_p)
+    instance_edge_lengths = calculate_edges_lengths(instance_p)
+    instance_features = list(zip(instance_angles, instance_edge_lengths))
+
+    dist = compare_polygons_multiple_dtw(prototype_features, instance_features)
+    # dist = dtw(prototype_features, instance_features).distance
+    return dist
+
+
 # compare two polygons whereas first polygon is rotated from -90 to 90 degree
 # and each point of it is used as starting point for dtw once
-def compare_polygons_rotation_translation_invariant(prototype, instance_points,
-                                                    rotation_extent=np.pi/8):
-    print("Start Comparing")
+def compare_polygons_rotation_translation_invariant(prototype, instance_points):
     instance_p = normalize_polygon(np.array(instance_points))
-    instance_center = np.array([np.mean([x[0] for x in instance_p]),
-                                np.mean([x[1] for x in instance_p])])
+    instance_center = np.array(np.mean(instance_p, axis=0))
     instance_angles = list(angles_to_centroid(instance_p, instance_center))
     instance_features = [[instance_p[i][0], instance_p[i][1], instance_angles[i]] for i in range(len(instance_points))]
-    min_dist = compare_polygons_dtw(prototype.normalized_rotations[0], instance_features)
-    print("dist", min_dist)
-    min_angle = -rotation_extent
-    start = datetime.datetime.now()
+    min_dist = dtw(prototype.normalized_rotations[0], instance_features).distance
+    # min_angle = -rotation_extent
+    # start = datetime.datetime.now()
     for prototype_rotation_features in prototype.normalized_rotations:
-        dist = compare_polygons_dtw(prototype_rotation_features, instance_features)
-        if dist < min_dist:
-            min_dist = dist
-            #min_angle = angle
-        #plt.plot(*rotated_p_1.T)  # plot current rotation of polygon
-    end = datetime.datetime.now()
-    print("Overall rotation", end - start)
-    #min_p_1 = rotate_polygon(p_1, center_1, min_angle)
-    #min_p_1 = normalize_polygon(min_p_1)
+        # dist = compare_polygons_multiple_dtw(prototype_rotation_features, instance_features)
+        dist = dtw(prototype_rotation_features, instance_features).distance
+        min_dist = min(min_dist, dist)
+        # if dist < min_dist:
+        #     min_dist = dist
+        #     min_angle = angle
+        # plt.plot(*rotated_p_1.T)  # plot current rotation of polygon
+    # end = datetime.datetime.now()
+    # print("Overall rotation", end - start)
+    # min_p_1 = rotate_polygon(p_1, center_1, min_angle)
+    # min_p_1 = normalize_polygon(min_p_1)
     # plt.plot(*min_p_1.T, lw=4, color='k')
     # plt.grid(True)
     # plt.show()
     # print("Overall multiple rotated sim", min_dist)
-    print("Min angle", "with dist", min_dist)
     return min_dist
 
 
@@ -382,29 +412,28 @@ def normalize_polygon(points):
     # is at (0,0), then normalize by dividing by std_y
     # x' = (x - mean_x) / std_y
     # y' = (y - mean_y) / std_y
-    mean = np.array([np.mean([x[0] for x in points]),
-                     np.mean([x[1] for x in points])])
-    std_y = np.std([p[1] for p in points])
+    mean = np.mean(points, axis=0)
+    std_y = np.std(points, axis=0)[0]
     points = (points - mean) / std_y
-    # print("std x", np.std([p[0] for p in points]))
-    # print("std y", np.std([p[1] for p in points]))
     return points
 
 
 # compare lists of points of two polygons using dtw
 # whereas each point of first polygon is used as starting point once
-def compare_polygons_dtw(points_1, points_2):
-    # using HMM Similarity Paper etc.
-    angles_1 = angles_to_adjacent_edge(points_1)
-    angles_2 = angles_to_adjacent_edge(points_2)
-    min_align_distance = dtw(points_1, points_2, keep_internals=True).distance
-    for i in range(len(points_1)):
-        points_1 = points_1[i:] + points_1[:i]
-        alignment = dtw(points_1, points_2, keep_internals=True)
-        if alignment.distance < min_align_distance:
-            min_align_distance = alignment.distance
+def compare_polygons_multiple_dtw(features_1, features_2):
+    # based on polygon/HMM similarity paper
+    min_align_distance = dtw(features_1, features_2, keep_internals=False).distance
+    min_index = 0
+    for i in range(len(features_1)):
+        features_1 = features_1[i:] + features_1[:i]
+        alignment = dtw(features_1, features_2, keep_internals=False)
+        min_align_distance = min(min_align_distance, alignment.distance)
+        # if alignment.distance < min_align_distance:
+        #     min_align_distance = alignment.distance
+        #     min_index = i
     # alignment.plot(type="threeway")
     # print("Distance:", min_align_distance)
+    # print("index", min_index)
     return min_align_distance
 
 
@@ -451,6 +480,14 @@ def angles_to_centroid(points, center):
         angle = np.arccos(cosine)
         angles.append(angle)  # np.degrees(angle)
     return angles
+
+
+def calculate_edges_lengths(points):
+    points = points[:] + points[0:1]  # repeat first point at end
+    lengths = []
+    for p0, p1 in zip(points, points[1:]):
+        lengths.append(math.dist(p0, p1))
+    return lengths
 
 
 if __name__ == '__main__':
