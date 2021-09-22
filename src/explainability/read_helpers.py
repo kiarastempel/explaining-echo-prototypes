@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import ast
+import matplotlib.pyplot as plt
 from prototypes_quality import normalize_polygon, rotate_polygon, angles_to_centroid
 
 
@@ -176,16 +177,18 @@ def get_segmentation_coordinates_of_prototypes(prototypes, volume_tracings_dict)
 def get_normalized_rotations_of_prototypes_with_angles(prototypes, rotation_extent, num_rotations):
     for i in range(len(prototypes)):
         for j in range(len(prototypes[i])):
+            print('file', prototypes[i][j].file_name)
             rotated_features = []
             points = [list(x) for x in zip(prototypes[i][j].segmentation['X'],
                                            prototypes[i][j].segmentation['Y'])]
 
             normalized_points = normalize_polygon(np.array(points))
-            center = np.array([np.mean([x[0] for x in normalized_points]),
-                               np.mean([x[1] for x in normalized_points])])
+            # plt.plot(*np.array(list(normalized_points) + list(normalized_points)[0:1]).T, lw = 4, color = 'k')
+            center = np.array(np.mean(normalized_points, axis=0))
 
             for angle in np.linspace(-rotation_extent, rotation_extent, num=num_rotations, endpoint=True):
                 rotated_points = list(normalize_polygon(rotate_polygon(normalized_points, center, angle)))
+                # plt.plot(*np.array(rotated_points + rotated_points[0:1]).T)
                 rotated_angles = list(angles_to_centroid(rotated_points, center))
                 features = [
                     [rotated_points[i][0], rotated_points[i][1],
@@ -193,5 +196,7 @@ def get_normalized_rotations_of_prototypes_with_angles(prototypes, rotation_exte
                 ]
                 rotated_features.append(features)
             prototypes[i][j].normalized_rotations = rotated_features
+            plt.grid(True)
+            plt.show()
     return prototypes
 
