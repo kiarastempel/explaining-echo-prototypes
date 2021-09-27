@@ -50,20 +50,22 @@ def main():
     # go on: applicability domain plotten!
     a_d_interval([chosen_prototypes_frame['euclidean_diff_features']], [chosen_prototypes_frame['euclidean_diff_angles']], ['features - shape'],
                  num_prototypes=0,
-                 similarity_measure='Euclidean Distance', diffs_type='Features - shape',
-                 num_cut_offs=1000, label_size=12, ticks_size=12)
+                 similarity_measure='Euclidean Distance', diffs_type='features',
+                 num_cut_offs=1000, label_size=12, ticks_size=12,
+                 ylabel="Average shape distance")
 
     a_d_amount([chosen_prototypes_frame['euclidean_diff_angles']], [chosen_prototypes_frame['euclidean_diff_features']], ['features - shape'],
                  num_prototypes=120,
-                 similarity_measure='Euclidean Distance', diffs_type='Features - shape',
-                 num_cut_offs=1000, label_size=12, ticks_size=12)
+                 similarity_measure='Euclidean Distance', diffs_type='shapes',
+                 num_cut_offs=1000, label_size=12, ticks_size=12,
+                 ylabel="Average feature distance")
 
     plt.scatter(chosen_prototypes_frame['euclidean_diff_angles'], chosen_prototypes_frame['euclidean_diff_features'])
     plt.show()
 
     # iterate over all instances in chosen_prototypes file and each time:
     # show segmentation instance, segmentation of chosen (most similar)
-    # prototype, and calculated 'shape distance'
+    # prototype, and calculated distances (of volumes, features, shapes)
     i = 0
     for _, row in chosen_prototypes_frame.T.iteritems():
         i += 1
@@ -101,7 +103,6 @@ def main():
         min_angle = 0
         for angle in np.linspace(-args.rotation_extent, args.rotation_extent,
                                  num=args.num_rotations, endpoint=True):
-        # for angle in [0]:
             rotated_points = list(normalize_polygon(rotate_polygon(normalized_prototype_points, center, angle)))
             rotated_angles = list(angles_to_centroid(rotated_points, center))
             features = [
