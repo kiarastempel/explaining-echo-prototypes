@@ -6,7 +6,11 @@ from prototypes_quality import normalize_polygon, rotate_polygon, angles_to_cent
 
 
 class Video:
-    def __init__(self, features, ef, file_name, video=None, segmentation=None, normalized_rotations=[]):
+    def __init__(self, features, ef, file_name, video=None, segmentation=None,
+                 normalized_rotations=[], feature_ranks=[], error_ranks=[],
+                 average_rank_distance=None,
+                 average_positive_rank_distance=None,
+                 average_negative_rank_distance=None):
         self.features = features
         self.ef = ef
         self.file_name = file_name
@@ -14,6 +18,11 @@ class Video:
         # segmentation: {'X': list of coordinates, 'Y': list of coordinates}
         self.segmentation = segmentation
         self.normalized_rotations = normalized_rotations
+        self.feature_ranks = feature_ranks
+        self.error_ranks = error_ranks
+        self.average_rank_distance = average_rank_distance
+        self.average_positive_rank_distance = average_positive_rank_distance
+        self.average_negative_rank_distance = average_negative_rank_distance
 
 
 def read_cluster_labels(cluster_file):

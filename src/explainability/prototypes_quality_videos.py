@@ -267,7 +267,7 @@ def save_metadata(diffs, output_file):
 
 
 def get_most_similar_prototypes(prototypes, video, volume_tracings_dict,
-                                weights=[0.5, 0.0, 0.5]): # [0.4, 0.2, 0.2]
+                                weights=[0.5, 0.0, 0.5]):  # [0.4, 0.2, 0.2]
     # get polygon of current instance
     instance_polygon = Polygon(zip(
         ast.literal_eval(volume_tracings_dict[video.file_name]['X']),
@@ -286,7 +286,12 @@ def get_most_similar_prototypes(prototypes, video, volume_tracings_dict,
     angle_diff = []
     i = 0
     for prototype in prototypes:
-        # feature similarity
+        if not len(instance_points) == 40:
+            print("skipped instance")
+        if not len(prototypes[i].segmentation['X']) == 40:
+            print(prototypes[i].segmentation['X'])
+            print("skipped prototype")
+            continue
         euc_feature_diff.append(np.linalg.norm([np.array(video.features) - np.array(prototype.features)]))
         cosine_feature_diff.append(-1 * (cosine_similarity(video.features, [prototype.features])[0][0]))
 

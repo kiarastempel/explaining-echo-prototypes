@@ -163,7 +163,7 @@ def delete_incorrect_data(metadata_path, volumes_path):
     file_list_data_frame = pd.read_csv(metadata_path, sep=',', decimal='.')
     volume_tracings_data_frame = pd.read_csv(volumes_path, sep=',', decimal='.')
     count = volume_tracings_data_frame.groupby(['FileName', 'Frame']).count()
-    incorrect_files_frame = count[(count > 21).any(1)]
+    incorrect_files_frame = count[(count < 21).any(1)]
     incorrect_files = list(set([x[0][:-4] for x in incorrect_files_frame['X1'].to_dict().keys()]))
     incorrect_files_avi = list(set([x[0] for x in incorrect_files_frame['X1'].to_dict().keys()]))
     print('Number of files having too many coordinates:', len(incorrect_files))
@@ -172,6 +172,8 @@ def delete_incorrect_data(metadata_path, volumes_path):
     file_list_data_frame.to_csv(metadata_path)
     volume_tracings_data_frame = volume_tracings_data_frame.set_index('FileName').drop(incorrect_files_avi)
     volume_tracings_data_frame.to_csv(volumes_path)
+    incorrect_files_frame.to_csv('incorrect.csv')
+    print('saved')
 
 
 def calc_axis_length(df):
