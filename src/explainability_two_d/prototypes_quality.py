@@ -12,9 +12,11 @@ from shapely.geometry import Polygon
 from dtw import *
 from pathlib import Path
 from tensorflow import keras
+from scipy.spatial.distance import euclidean
 from explainability import prototypes_quality_videos
 from prototypes_calculation import get_images_of_prototypes
 from two_D_resnet import get_data
+
 
 def main():
     # os.environ["CUDA_VISIBLE_DEVICES"] = str(2)
@@ -360,8 +362,14 @@ def compare_polygons_with_lengths_and_angles(prototype, instance_points):
     instance_edge_lengths = calculate_edges_lengths(instance_p)
     instance_features = list(zip(instance_angles, instance_edge_lengths))
 
-    dist = compare_polygons_multiple_dtw(prototype_features, instance_features)
+    # uncomment to use dtw for comparison
+    # dist = compare_polygons_multiple_dtw(prototype_features, instance_features)
     # dist = dtw(prototype_features, instance_features).distance
+
+    # uncomment to calculate euclidean distance for comparison
+    dist = 0
+    for i in range(len(instance_features)):
+        dist = dist + euclidean(prototype_features[i], instance_features[i])
     return dist
 
 
@@ -377,7 +385,14 @@ def compare_polygons_rotation_translation_invariant(prototype, instance_points):
     # start = datetime.datetime.now()
     for prototype_rotation_features in prototype.normalized_rotations:
         # dist = compare_polygons_multiple_dtw(prototype_rotation_features, instance_features)
-        dist = dtw(prototype_rotation_features, instance_features).distance
+
+        # uncomment to use dtw for comparison
+        # dist = dtw(prototype_rotation_features, instance_features).distance
+
+        # use euclidean distance for comparison
+        dist = 0
+        for i in range(len(instance_features)):
+            dist = dist + euclidean(prototype_rotation_features[i], instance_features[i])
         min_dist = min(min_dist, dist)
         # if dist < min_dist:
         #     min_dist = dist
