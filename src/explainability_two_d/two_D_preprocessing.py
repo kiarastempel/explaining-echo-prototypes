@@ -2,15 +2,11 @@ from pathlib import Path
 from PIL import Image
 from shapely.geometry import Polygon
 import cv2
-import cv2
 import pandas as pd
-import numpy as np
 import tensorflow as tf
 import random
 import os
 import argparse
-import ast
-import matplotlib.pyplot as plt
 
 
 def main():
@@ -39,7 +35,6 @@ def main():
 
     delete_incorrect_data(metadata_path, volumes_path)
     volume_tracings_data_frame = get_volume_tracings(metadata_path, volumes_path, output_directory)
-    return
     create_still_images(volume_tracings_data_frame, avi_directory, output_directory)
 
 
@@ -48,33 +43,23 @@ def create_still_images(volume_tracings_data_frame, avi_directory, output_direct
 
         file_path = os.path.join(avi_directory, row['FileName'])
         frame_position = row['Frame']
-        # print('File to convert:', file_path)
-        # print('Frame position', frame_position)
         video = cv2.VideoCapture(str(file_path))
         video.set(cv2.CAP_PROP_POS_FRAMES, frame_position)
         ret, frame = video.read()
         if frame is not None:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         video.release()
-        # print('Frame', frame)
-        # print('Shape', frame.shape)
 
         # save frame as png file
         image = Image.fromarray(frame)
         output_path = Path(output_directory, row['ImageFileName'])
         image.save(output_path)
-        # plt.figure(figsize=(5, 5))
-        # plt.axis('off')
-        # plt.imshow(frame)
-        # plt.savefig(output_path)
-        # plt.close()
 
 
 def get_volume_tracings(metadata_path, volumes_path, output_directory):
     file_list_data_frame = pd.read_csv(metadata_path, sep=',', decimal='.')[['FileName', 'ESV', 'EDV']]
     file_list_data_frame['FileName'] = file_list_data_frame['FileName'].astype(str) + '.avi'
     volume_tracings_data_frame = pd.read_csv(volumes_path, sep=',', decimal='.')
-    # volume_tracings_data_frame['FileName'] = volume_tracings_data_frame['FileName'].astype(str) + '.avi'
 
     # save all 21 coordinate pairs of left ventricle as two lists: X, Y
     coordinates = volume_tracings_data_frame.groupby(['FileName', 'Frame'])\
@@ -85,14 +70,6 @@ def get_volume_tracings(metadata_path, volumes_path, output_directory):
     # concatenate X1 + reversed X2, Y1 + reversed Y2 to get a list of all pairs
     coordinates['X'] = coordinates['X1'] + coordinates['X2']
     coordinates['Y'] = coordinates['Y1'] + coordinates['Y2']
-    # for i, row in coordinates.T.iteritems():
-    #     polygon = Polygon(zip(row['X'], row['Y']))
-    #     print(polygon.is_valid)
-    #     x, y = polygon.exterior.xy
-    #     plt.plot(x, y)
-    #     for j in range(len(x)):
-    #         plt.annotate(j, (x[j], y[j]))
-    #     plt.show()
 
     volume_tracings_data_frame = volume_tracings_data_frame.groupby(
         ['FileName', 'Frame']).head(1).reset_index(drop=True)
@@ -122,7 +99,6 @@ def get_volume_tracings(metadata_path, volumes_path, output_directory):
     volume_tracings_data_frame['ImageFileName'] = \
         volume_tracings_data_frame['FileName'].str.replace(r'.avi$', '') + '_' \
         + volume_tracings_data_frame['Frame'].astype(str) + '.png'
-    # print(volume_tracings_data_frame[['FileName', 'Frame', 'AxisLength', 'Volume', 'ESV/EDV', 'X', 'Y']])
     print(volume_tracings_data_frame[['FileName', 'Frame', 'AxisLength', 'ESV/EDV', 'PolyArea']])
 
     # split into train, validation and test data
@@ -131,7 +107,7 @@ def get_volume_tracings(metadata_path, volumes_path, output_directory):
     counter_smaller = 0
     counter_bigger = 0
     for i, row in volume_tracings_data_frame.T.iteritems():
-        # assign both frames of same video to same dataset
+        # assign both frames of same image to same dataset
         if i % 2 == 0:
             if volume_tracings_data_frame.at[i, 'AxisLength'] < volume_tracings_data_frame.at[i + 1, 'AxisLength']:
                 counter_smaller += 1  # first ESV, then EDV
@@ -164,7 +140,9 @@ def delete_incorrect_data(metadata_path, volumes_path):
     volume_tracings_data_frame = pd.read_csv(volumes_path, sep=',', decimal='.')
     count = volume_tracings_data_frame.groupby(['FileName', 'Frame']).count()
     incorrect_files_frame = count[(count < 21).any(1)]
+    # drop file ending
     incorrect_files = list(set([x[0][:-4] for x in incorrect_files_frame['X1'].to_dict().keys()]))
+    # keep file ending (avi)
     incorrect_files_avi = list(set([x[0] for x in incorrect_files_frame['X1'].to_dict().keys()]))
     print('Number of files having too many coordinates:', len(incorrect_files))
 
@@ -183,7 +161,6 @@ def calc_axis_length(df):
 
 
 def calc_poly_area(df):
-    # instead: iterate over dataframe and calculate it for each row separately..
     df['PolyArea'] = 0.0
     for i, row in df.T.iteritems():
         polygon = Polygon(zip(row['X'], row['Y']))

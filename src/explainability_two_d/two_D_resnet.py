@@ -4,10 +4,10 @@ from tensorflow.python.keras import Input
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from pathlib import Path
 from PIL import Image
+from keras.callbacks import LearningRateScheduler
 from classification_models.keras import Classifiers
 import math
 import tensorflow as tf
-import torchvision.models as models
 import random
 import argparse
 import pandas as pd
@@ -16,14 +16,9 @@ import numpy as np
 import os
 import tempfile
 import matplotlib.pyplot as plt
-from keras.optimizers import SGD
-from sklearn.preprocessing import LabelEncoder
-from keras.callbacks import LearningRateScheduler
 
 
 def main():
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(2)
-
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory',
                         default='../../data/still_images',
@@ -55,8 +50,9 @@ def main():
     tf.random.set_seed(5)
     random.seed(5)
 
-    # test_mae = 1000000
+    # test different model configurations
 
+    # test_mae = 1000000
     # for bs in [32, 64, 128, 256]:
     #     for lr in [0.00001, 0.0001, 0.001, 0.01, 0.1]:
     #         for l2_reg in [0.3, 0.2, 0.1, 0.05, 0.01, 0.001]:
@@ -76,6 +72,7 @@ def main():
     #                         output_directory_history,
     #                         'best_so_far.txt')
 
+    # train model using given configuration
     train(args.input_directory, frame_volumes_path, args.l2_regularization,
           args.dropout_intensity, args.augmentation_intensity,
           args.learning_rate, args.batch_size, args.epochs,
@@ -95,8 +92,6 @@ def train(input_directory, frame_volumes_path, l2_regularization,
     model = get_resnet18_model(l2_regularization, dropout_intensity)
     optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
     loss = keras.losses.MeanSquaredError()
-    # optimizer = SGD(lr=0.0, momentum=0.9)
-    # loss = 'binary_crossentropy'
     model.compile(loss=loss, optimizer=optimizer, metrics=['mse', 'mae', 'mape'])
     print('Compiled')
 
@@ -112,7 +107,6 @@ def train(input_directory, frame_volumes_path, l2_regularization,
                                      train_volumes,
                                      batch_size=batch_size)
     # test if augmentation works
-    # print(train_data)
     # for x, y in train_data:
     #     print(x[0])
     #     plt.imshow(x[0])
@@ -123,7 +117,7 @@ def train(input_directory, frame_volumes_path, l2_regularization,
         monitor='val_loss', min_delta=0.1, patience=20, verbose=0,
         mode='auto', baseline=None, restore_best_weights=True)
 
-    # learning schedule callback
+    # if using learning schedule callback
     lrate = LearningRateScheduler(step_decay)
 
     # save model after each epoch
@@ -192,7 +186,6 @@ def get_data(input_directory, frame_volumes_path, return_numpy_arrays=False,
 
     i = 0
     for _, row in volume_tracings_data_frame.T.iteritems():
-        # print(i)
         i += 1
         # get image and y label
         image = Image.open(Path(input_directory, row['ImageFileName']))
@@ -227,15 +220,6 @@ def get_data(input_directory, frame_volumes_path, return_numpy_arrays=False,
 
 
 def get_resnet50_model(l2_reg):
-    # somehow does not work
-    # base_model = ResNet50(weights='imagenet', include_top=False,
-    #                       input_tensor=Input(shape=(112, 112, 3)))
-    # x = base_model.output
-    # x = keras.layers.GlobalAvgPool2D()(x),
-    # x = keras.layers.Flatten()(x),
-    # x = keras.layers.Dense(units=1)(x),
-    # model = keras.Model(inputs=base_model.input, outputs=x)
-
     model = keras.models.Sequential()
     model.add(ResNet50(include_top=False, input_tensor=Input(shape=(112, 112, 3))))  # weights=None
     model.add(keras.layers.GlobalAvgPool2D())
@@ -263,35 +247,13 @@ def get_resnet18_model(l2_reg, dropout=0.1, untrained_layers=0):
     model.add(keras.layers.Dense(8))  # layer 8
     model.add(keras.layers.Dense(1))
 
-    # model = ResNet18(input_shape=(112, 112, 3), weights='imagenet',
-    #                  include_top=False)
-    # if untrained_layers != 0:
-    #     for layer in model.layers[:-untrained_layers]:
-    #         layer.trainable = False
-
-    # x = keras.layers.GlobalAveragePooling2D()(model.output)
-    # x = keras.layers.Dense(256)(x)
-    # x = keras.layers.Dropout(dropout)(x)
-    # output = keras.layers.Dense(1)(x)
-    # model = keras.models.Model(inputs=[model.input], outputs=[output])
     model.summary()
 
     add_regularization(model, regularizer=tf.keras.regularizers.l2(l2_reg))
     return model
 
 
-def get_resnet18_model_torch():
-    model = models.resnet18(pretrained=True, progress=True)
-    model.fc.out_features = 1
-    model.train()
-    # print(model.avgpool)
-    # model = torch.nn.Sequential(*list(model.children())[:-1])
-    # print(model)
-    # add_regularization(model, regularizer=tf.keras.regularizers.l2(0.1))
-    return model
-
-
-# source: https://sthalles.github.io/keras-regularizer/
+# (slightly modified) source: https://sthalles.github.io/keras-regularizer/
 def add_regularization(model, regularizer=tf.keras.regularizers.l2(0.01)):
     if not isinstance(regularizer, tf.keras.regularizers.Regularizer):
         print("Regularizer must be a subclass of tf.keras.regularizers.Regularizer")
@@ -303,23 +265,24 @@ def add_regularization(model, regularizer=tf.keras.regularizers.l2(0.01)):
             if hasattr(layer, attr):
                 setattr(layer, attr, regularizer)
 
-    # When changing layers attributes, change only happens in model config file
+    # when changing layers attributes, change only happens in model config file
     model_json = model.to_json()
 
-    # Save the weights before reloading the model.
+    # save the weights before reloading the model.
     tmp_weights_path = os.path.join(tempfile.gettempdir(), 'tmp_weights.h5')
     model.save_weights(tmp_weights_path)
 
     # load the model from the config
     model = tf.keras.models.model_from_json(model_json)
 
-    # Reload the model weights
+    # reload the model weights
     model.load_weights(tmp_weights_path, by_name=True)
     return model
 
 
 # learning rate schedule
-# source: https://machinelearningmastery.com/using-learning-rate-schedules-deep-learning-models-python-keras/
+# (slightly modified) source:
+# https://machinelearningmastery.com/using-learning-rate-schedules-deep-learning-models-python-keras/
 def step_decay(epoch):
     initial_lrate = 0.1
     drop = 0.5

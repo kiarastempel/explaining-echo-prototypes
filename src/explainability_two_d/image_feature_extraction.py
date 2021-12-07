@@ -1,9 +1,9 @@
 import argparse
-from pathlib import Path
 import numpy as np
+from pathlib import Path
 from tensorflow import keras
-from two_D_resnet import get_data
-from explainability import read_helpers as rh
+from two_d_resnet import get_data
+import read_helpers as rh
 
 
 def main():
@@ -16,8 +16,8 @@ def main():
                         default='FrameVolumes.csv',
                         help='Name of the file containing frame volumes.')
     parser.add_argument('-cl', '--volume_clusters_file',
-                        default='../../data/clustering_volume/cluster_labels_ef.txt',
-                        help='Path to file containing ef cluster labels')
+                        default='../../data/clustering_volume/cluster_labels_esv.txt',
+                        help='Path to file containing volume cluster labels')
     parser.add_argument('-vt', '--volume_type', default='ESV',
                         help='ESV, EDV or None')
     parser.add_argument('-mp', '--model_path', required=True)
@@ -52,24 +52,22 @@ def extract_features(model_path, hidden_layer_index, volume_cluster_labels,
     model = keras.models.load_model(model_path)
     print("End loading model")
     model.summary()
-    # keras.utils.plot_model(model.layers, to_file="data/resnet_18.png",
-    #                        show_shapes=True)
 
-    # extract features of videos of each ef-cluster at given hidden layer index
+    # extract features of videos of each volume-cluster at given hidden layer index
     print('Number of layers', len(model.layers))
     if hidden_layer_index is None:
         hidden_layer_index = len(model.layers) - 2
     print('Hidden layer index', hidden_layer_index)
     num_volume_clusters = max(volume_cluster_labels) + 1
-    print("Calculated " + str(num_volume_clusters) + " ef clusters")
+    print("Calculated " + str(num_volume_clusters) + " volume clusters")
     for i in range(num_volume_clusters):
-        print("Start ef cluster " + str(i))
+        print("Start extracting features for volume cluster " + str(i))
         extracted_features = get_hidden_layer_features(
             model, train_dataset, volume_cluster_labels, i,
             hidden_layer_index)
 
         # write features to file
-        out_file = Path(output_directory, 'extracted_video_features_' + str(i) + ".txt")
+        out_file = Path(output_directory, 'extracted_image_features_' + str(i) + ".txt")
         with open(out_file, "w") as txt_file:
             for f in range(len(extracted_features)):
                 txt_file.write(str(extracted_features[f]) + "\n")
@@ -83,14 +81,12 @@ def get_hidden_layer_features(model, train_dataset, cluster_labels,
     @return: list of features
     """
     print("Number of layers:", len(model.layers))
-    # layer_index = len(model.layers) - 2
     extractor = keras.Model(inputs=[model.input],
                             outputs=model.layers[hidden_layer_index].output)
     extracted_features = []
     i = 0
     for instance in train_dataset:
         if cluster_labels[i] == volume_cluster_index:
-            # print("i", i)
             instance = np.expand_dims(instance, axis=0)
             features = extractor(instance)
             extracted_features.append(features)

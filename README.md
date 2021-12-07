@@ -1,1 +1,1 @@
-# Echo-Pipe
+# Prototype-based Explanation of Neural Network Outputs for Ultrasound Images

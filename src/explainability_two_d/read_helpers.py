@@ -2,19 +2,19 @@ import pandas as pd
 import numpy as np
 import ast
 import matplotlib.pyplot as plt
-from prototypes_quality import normalize_polygon, rotate_polygon, angles_to_centroid
+from similarity import normalize_polygon, rotate_polygon, angles_to_centroid
 
 
-class Video:
-    def __init__(self, features, ef, file_name, video=None, segmentation=None,
+class Image:
+    def __init__(self, features, volume, file_name, image=None, segmentation=None,
                  normalized_rotations=[], feature_ranks=[], error_ranks=[],
                  average_rank_distance=None,
                  average_positive_rank_distance=None,
                  average_negative_rank_distance=None):
         self.features = features
-        self.ef = ef
+        self.volume = volume
         self.file_name = file_name
-        self.video = video
+        self.image = image
         # segmentation: {'X': list of coordinates, 'Y': list of coordinates}
         self.segmentation = segmentation
         self.normalized_rotations = normalized_rotations
@@ -27,16 +27,16 @@ class Video:
 
 def read_cluster_labels(cluster_file):
     cluster_labels = []
-    efs = []
+    volumes = []
     file_names = []
     with open(cluster_file, "r") as txt_file:
         for line in txt_file:
             line_split = line.split(" ")
             cluster_labels.append(int(line_split[0]))
 
-            efs.append(float(line_split[1]))
+            volumes.append(float(line_split[1]))
             file_names.append(line_split[2].rsplit()[0])
-    return cluster_labels, efs, file_names
+    return cluster_labels, volumes, file_names
 
 
 def read_extracted_features(file_path):
@@ -45,40 +45,40 @@ def read_extracted_features(file_path):
         for line in txt_file:
             if not line.startswith("tf.Tensor"):
                 if line.startswith("[["):
-                    video_features = []
+                    image_features = []
                     line = line.strip("[")
                 if line.__contains__("shape"):
                     line = line.split("]")[0]
-                    video_features.extend([float(v) for v in line.split()])
-                    extracted_features.append(video_features)
+                    image_features.extend([float(v) for v in line.split()])
+                    extracted_features.append(image_features)
                 else:
-                    video_features.extend([float(v) for v in line.split()])
+                    image_features.extend([float(v) for v in line.split()])
     return extracted_features
 
 
-def read_video_clusters(cluster_labels_file, video_features_file):
+def read_image_clusters(cluster_labels_file, image_features_file):
     # list of clusters
-    # where each cluster is a list of its corresponding videos
+    # where each cluster is a list of its corresponding images
     cluster_features = []
 
-    video_cluster_labels, ef_file, file_names = \
+    image_cluster_labels, volume_file, file_names = \
         read_cluster_labels(cluster_labels_file)
-    num_clusters = max(video_cluster_labels) + 1
+    num_clusters = max(image_cluster_labels) + 1
     print(str(cluster_labels_file), " num clusters: ", num_clusters)
     for i in range(num_clusters):
         cluster_features.append([])
 
-    video_features = read_extracted_features(video_features_file)
-    for i in range(len(video_features)):
-        cluster_features[video_cluster_labels[i]].append(
-            Video(video_features[i], ef_file[i], file_names[i]))
+    image_features = read_extracted_features(image_features_file)
+    for i in range(len(image_features)):
+        cluster_features[image_cluster_labels[i]].append(
+            Image(image_features[i], volume_file[i], file_names[i]))
     return cluster_features
 
 
-def read_video_cluster_centers(centers_file_path, video_known=True):
+def read_image_cluster_centers(centers_file_path, image_known=True):
     cluster_centers = []
     new_center = True
-    if video_known:
+    if image_known:
         i = 0
     else:
         i = -2
@@ -87,11 +87,11 @@ def read_video_cluster_centers(centers_file_path, video_known=True):
             line_split = line.split()
             if new_center:
                 new_center = False
-                if video_known:
-                    ef = line_split[1]
+                if image_known:
+                    volume = line_split[1]
                     file_name = line_split[2]
                 else:
-                    ef = None
+                    volume = None
                     file_name = None
                 if len(line_split[3 + i].strip("[")) == 0:
                     features = []
@@ -107,7 +107,7 @@ def read_video_cluster_centers(centers_file_path, video_known=True):
                         line_split.pop()
                     for f in line_split:
                         features.append(float(f))
-                    cluster_centers.append(Video(features, ef, file_name))
+                    cluster_centers.append(Image(features, volume, file_name))
                     new_center = True
                 else:
                     for f in line_split:
@@ -115,33 +115,34 @@ def read_video_cluster_centers(centers_file_path, video_known=True):
     return cluster_centers
 
 
-def read_ef_cluster_centers(centers_file_path):
+def read_volume_cluster_centers(centers_file_path):
     cluster_centers = []
     with open(centers_file_path, "r") as txt_file:
         for line in txt_file:
             line_split = line.split()
-            ef = line_split[1].strip("[]")
-            cluster_centers.append(float(ef))
+            volume = line_split[1].strip("[]")
+            cluster_centers.append(float(volume))
     return cluster_centers
 
 
-def read_prototypes(centers_file_path, volume_tracings_file_path=None, actual_volumes=True):
+def read_prototypes(centers_file_path, volume_tracings_file_path=None,
+                    actual_volumes=True):
     prototypes = {}
     new_center = True
-    ef_cluster_index = 0
-    prototypes[ef_cluster_index] = []
+    volume_cluster_index = 0
+    prototypes[volume_cluster_index] = []
     with open(centers_file_path, "r") as txt_file:
         for line in txt_file:
             line_split = line.split()
             if new_center:
                 new_center = False
-                if int(line_split[0]) is not ef_cluster_index:
-                    ef_cluster_index = int(line_split[0])
-                    prototypes[ef_cluster_index] = []
+                if int(line_split[0]) is not volume_cluster_index:
+                    volume_cluster_index = int(line_split[0])
+                    prototypes[volume_cluster_index] = []
                 if not line_split[2] == 'None':
-                    ef = float(line_split[2])
+                    volume = float(line_split[2])
                 else:
-                    ef = 0
+                    volume = 0
                 if not line_split[3] == 'None':
                     file_name = line_split[3]
                 else:
@@ -160,7 +161,9 @@ def read_prototypes(centers_file_path, volume_tracings_file_path=None, actual_vo
                         line_split.pop()
                     for f in line_split:
                         features.append(float(f))
-                    prototypes[ef_cluster_index].append(Video(features, ef, file_name))
+                    prototypes[volume_cluster_index].append(
+                        Image(features, volume, file_name)
+                    )
                     new_center = True
                 else:
                     for f in line_split:
@@ -170,7 +173,7 @@ def read_prototypes(centers_file_path, volume_tracings_file_path=None, actual_vo
         for volume_cluster_prototypes in prototypes.values():
             for prototype in volume_cluster_prototypes:
                 volume = volume_tracings_data_frame.loc[volume_tracings_data_frame['ImageFileName'] == prototype.file_name]['Volume'].iloc[0]
-                prototype.ef = volume
+                prototype.volume = volume
     return prototypes
 
 
@@ -190,14 +193,11 @@ def get_normalized_rotations_of_prototypes_with_angles(prototypes, rotation_exte
             rotated_features = []
             points = [list(x) for x in zip(prototypes[i][j].segmentation['X'],
                                            prototypes[i][j].segmentation['Y'])]
-
             normalized_points = normalize_polygon(np.array(points))
-            # plt.plot(*np.array(list(normalized_points) + list(normalized_points)[0:1]).T, lw = 4, color = 'k')
             center = np.array(np.mean(normalized_points, axis=0))
 
             for angle in np.linspace(-rotation_extent, rotation_extent, num=num_rotations, endpoint=True):
                 rotated_points = list(normalize_polygon(rotate_polygon(normalized_points, center, angle)))
-                # plt.plot(*np.array(rotated_points + rotated_points[0:1]).T)
                 rotated_angles = list(angles_to_centroid(rotated_points, center))
                 features = [
                     [rotated_points[i][0], rotated_points[i][1],
@@ -205,7 +205,5 @@ def get_normalized_rotations_of_prototypes_with_angles(prototypes, rotation_exte
                 ]
                 rotated_features.append(features)
             prototypes[i][j].normalized_rotations = rotated_features
-            plt.grid(True)
-            plt.show()
     return prototypes
 
