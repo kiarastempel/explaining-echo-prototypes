@@ -39,8 +39,9 @@ def main():
 
 
 def create_still_images(volume_tracings_data_frame, avi_directory, output_directory):
+    """Get the frames of the echocardiograms of all instances that correspond
+    to the time points (frame positions) representing ESV or EDV."""
     for _, row in volume_tracings_data_frame.T.iteritems():
-
         file_path = os.path.join(avi_directory, row['FileName'])
         frame_position = row['Frame']
         video = cv2.VideoCapture(str(file_path))
@@ -57,6 +58,9 @@ def create_still_images(volume_tracings_data_frame, avi_directory, output_direct
 
 
 def get_volume_tracings(metadata_path, volumes_path, output_directory):
+    """Get the volume segmentation tracings that correspond to the still
+    images representing ESV or EDV. The segmentations are represented by
+    a list of coordinate pairs."""
     file_list_data_frame = pd.read_csv(metadata_path, sep=',', decimal='.')[['FileName', 'ESV', 'EDV']]
     file_list_data_frame['FileName'] = file_list_data_frame['FileName'].astype(str) + '.avi'
     volume_tracings_data_frame = pd.read_csv(volumes_path, sep=',', decimal='.')
@@ -138,6 +142,8 @@ def get_volume_tracings(metadata_path, volumes_path, output_directory):
 
 
 def delete_incorrect_data(metadata_path, volumes_path, output_directory):
+    """Delete the instances which have an inconsistent number of coordinate
+    pairs."""
     file_list_data_frame = pd.read_csv(metadata_path, sep=',', decimal='.')
     volume_tracings_data_frame = pd.read_csv(volumes_path, sep=',', decimal='.')
     count = volume_tracings_data_frame.groupby(['FileName', 'Frame']).count()
@@ -156,12 +162,14 @@ def delete_incorrect_data(metadata_path, volumes_path, output_directory):
 
 
 def calc_axis_length(df):
+    """Calculate the length of the one main (long) axis of the segmentation."""
     df['AxisLength'] = ((df.X1.sub(df.X2) ** 2).add(
         df.Y1.sub(df.Y2) ** 2)) ** 0.5
     return df
 
 
 def calc_poly_area(df):
+    """Calculate the area of the polygon that represents the ventricle."""
     df['PolyArea'] = 0.0
     for i, row in df.T.iteritems():
         polygon = Polygon(zip(row['X'], row['Y']))

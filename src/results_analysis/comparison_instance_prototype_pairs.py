@@ -6,7 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 from dtw import *
-from similarity import normalize_polygon, rotate_polygon, angles_to_centroid
+from utils.similarity import normalize_polygon, rotate_polygon, angles_to_centroid
 
 
 def main():
@@ -52,9 +52,11 @@ def main():
 def plot_segmentation_comparisons(chosen_prototypes_frame,
                                   volume_tracings_dict,
                                   rotation_extent, num_rotations):
-    # iterate over all instances in chosen_prototypes file and each time:
-    # show segmentation instance, segmentation of chosen (most similar)
-    # prototype, and calculated distances (of volumes, features, shapes)
+    """Plot the segmentations of instance and selected most similar prototype
+    for comparison while iterating over all instances contained in
+    chosen_prototypes_frame.
+    The corresponding calculated distances of volumes, features and shapes
+    are displayed."""
     min_dists = []
     for i, row in chosen_prototypes_frame.T.iteritems():
         instance = row['file_name']

@@ -94,6 +94,7 @@ def main():
 
 
 def boxplot(data, ylabel, title):
+    """Show a boxplot of the given data."""
     plt.boxplot(data)
     plt.xticks([])
     plt.ylabel(ylabel)

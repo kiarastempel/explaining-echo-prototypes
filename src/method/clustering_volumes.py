@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from tensorflow import keras
-from src.model.two_d_resnet import get_data
-from src.utils import clustering as cl
+from model.two_d_resnet import get_data
+from utils import clustering as cl
 
 
 def main():
@@ -65,6 +65,8 @@ def main():
 
 
 def get_predictions(still_images, model_path):
+    """Get the volume values that the given model predicts for the still
+    images."""
     predictions = []
 
     # load model
@@ -80,7 +82,18 @@ def get_predictions(still_images, model_path):
 
 
 def cluster_by_volume(volumes, output_directory, file_ending='', error=13.57):
-    # employ jenks caspall algorithm to find interval borders
+    """
+    Employ Jenks Caspall algorithm to find interval borders for the volume
+    range.
+    The cluster or interval borders and cluster labels are saved to files.
+    @param volumes: list of the volumes of all still images
+    @param output_directory: directory for saving the interval borders and
+    cluster labels
+    @param file_ending: file ending that the files in the output directory
+    should have, indicating whether the volumes are ESV or EDV
+    @param error: average prediction error of predicting model
+    """
+    #
     natural_breaks = []
     data = []
     num_intervals = []
@@ -116,16 +129,6 @@ def cluster_by_volume(volumes, output_directory, file_ending='', error=13.57):
     with open(Path(output_directory, 'cluster_upper_borders' + file_ending + '.txt'), 'w') as txt_file:
         for i in range(len(natural_breaks) - 1):
             txt_file.write(str(i) + ' ' + str([natural_breaks[i + 1]]) + '\n')
-
-
-def get_volume_cluster_centers_indices(cluster_centers, volume_list):
-    indices = []
-    for c in cluster_centers:
-        # find still image that corresponds exactly to volume of center
-        for i, volume in enumerate(volume_list):
-            if volume == c:
-                indices.append(i)
-    return indices
 
 
 if __name__ == '__main__':

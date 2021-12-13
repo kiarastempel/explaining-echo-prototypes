@@ -27,6 +27,7 @@ def main():
 
 
 def compare_model_histories(input_directories, output_directory):
+    """Compare the validation metric histories of multiple models."""
     model_eval_folders = input_directories
     model_evals = []
     train_mae_histories = []
@@ -82,6 +83,8 @@ def plot_metric_over_epochs(metric_values_val,
                             metric_values_train,
                             metric='MAE',
                             label_size=21, ticks_size=17):
+    """Plot the metric history of validation and training data of a single
+    model."""
     plt.plot(metric_values_val, label='validation')
     plt.plot(metric_values_train, label='train')
     plt.xlabel('Epochs', fontsize=label_size)

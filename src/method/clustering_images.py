@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.preprocessing import StandardScaler, Normalizer
 from sklearn.decomposition import PCA
-from src.utils import read_helpers as rh, clustering as cl
+from utils import read_helpers as rh, clustering as cl
 
 
 def main():
@@ -50,11 +50,28 @@ def main():
                                normalize=False)
 
 
-def cluster_by_latent_features(volume_cluster_labels, actual_volumes, file_names,
+def cluster_by_latent_features(volume_cluster_labels, actual_volumes,
+                               file_names,
                                image_features_directory, output_directory,
                                n=100,
                                standardize=True, normalize=False,
                                pca=False, pca_components=3):
+    """
+    Cluster the given instances by latent features extracted from the neural
+    network to be explained.
+    Each volume group of instances is clustered separately.
+    The cluster centers and cluster labels are saved to files.
+    @param volume_cluster_labels: cluster labels of volume clustering
+    @param actual_volumes: volumes of the given instances
+    @param file_names: the file names of the still image instances
+    @param image_features_directory: directory containing the still images
+    @param output_directory: directory for saving the clustering results
+    @param n: maximum possible number of clusters to be considered
+    @param standardize: if features should be standardized
+    @param normalize: if features should be normalized
+    @param pca: if pca should be applied on the features
+    @param pca_components: how many components to consider calculated by pca
+    """
     # array for standardization/normalization
     # with size num_instances * num_features
     all_extracted_features = []
@@ -137,6 +154,14 @@ def cluster_by_latent_features(volume_cluster_labels, actual_volumes, file_names
 
 
 def transform(transformer, all_extracted_features, extracted_features_per_cluster):
+    """
+    Transform the data before cluster analysis (standardizing or normalizing).
+    @param transformer: e.g. Standardizer or Normalizer
+    @param all_extracted_features: one list containing features of all instances
+    @param extracted_features_per_cluster: list of lists where each sublist
+    contains the features of one volume cluster
+    @return: list containing transformed data
+    """
     # transform all features
     all_extracted_features_ft = transformer.fit_transform(all_extracted_features)
     # copy transformed features to corresponding indices of features per cluster
@@ -150,6 +175,8 @@ def transform(transformer, all_extracted_features, extracted_features_per_cluste
 
 
 def get_image_cluster_centers_indices(cluster_centers, extracted_features):
+    """Get the indices that the cluster centers have in the list of all
+    instances."""
     indices = []
     for c in cluster_centers:
         # find echocardiographic still image that corresponds to features of c
@@ -160,6 +187,8 @@ def get_image_cluster_centers_indices(cluster_centers, extracted_features):
 
 
 def visualize_feature_distribution(all_extracted_features):
+    """Plot the distribution or domain of all feature values of all
+    instances."""
     x = []
     for f in all_extracted_features:
         x.extend(f)

@@ -82,6 +82,8 @@ def train(input_directory, frame_volumes_path, l2_regularization,
           dropout_intensity, augmentation_intensity,
           learning_rate, batch_size, epochs,
           output_directory_model, output_directory_history):
+    """Train model with given configuration and save model as well as
+    the evaluation of the model (metrics or loss history)."""
     # get train/validation/test data
     train_still_images, train_volumes, _, test_still_images, test_volumes, _, val_still_images, val_volumes, _ = get_data(
         input_directory, frame_volumes_path, return_numpy_arrays=True)
@@ -160,9 +162,15 @@ def train(input_directory, frame_volumes_path, l2_regularization,
     return model, train_mae, test_mae
 
 
-# volume_type has to be in {None, 'ESV', 'EDV'}
 def get_data(input_directory, frame_volumes_path, return_numpy_arrays=False,
              volume_type=None):
+    """
+    Get data of still image instances that are contained in the given input
+    directory.
+    The volume_type has to be in {None, 'ESV', 'EDV'}.
+    @return still images, volumes and file names of the instances contained in
+    the input directory.
+    """
     train_still_images = []
     train_volumes = []
     train_filenames = []
@@ -211,6 +219,7 @@ def get_data(input_directory, frame_volumes_path, return_numpy_arrays=False,
 
 
 def get_resnet50_model(l2_reg):
+    """Get model that corresponds to ResNet with 50 layers."""
     model = keras.models.Sequential()
     model.add(ResNet50(include_top=False, input_tensor=Input(shape=(112, 112, 3))))  # weights=None
     model.add(keras.layers.GlobalAvgPool2D())
@@ -223,7 +232,9 @@ def get_resnet50_model(l2_reg):
     return model
 
 
-def get_resnet18_model(l2_reg, dropout=0.1, untrained_layers=0):
+def get_resnet18_model(l2_reg, dropout=0.1):
+    """Get model that corresponds to ResNet with 18 layers, extended with
+    additional dense layers for further feature reduction."""
     ResNet18, preprocess_input = Classifiers.get('resnet18')
     model = keras.models.Sequential()
     model.add(ResNet18(input_shape=(112, 112, 3), weights='imagenet',
@@ -246,13 +257,13 @@ def get_resnet18_model(l2_reg, dropout=0.1, untrained_layers=0):
 
 # (slightly modified) source: https://sthalles.github.io/keras-regularizer/
 def add_regularization(model, regularizer=tf.keras.regularizers.l2(0.01)):
+    """Add regularization to all Conv2D layers"""
     if not isinstance(regularizer, tf.keras.regularizers.Regularizer):
         print('Regularizer must be a subclass of tf.keras.regularizers.Regularizer')
         return model
 
     for layer in model.layers[:-1]:
         for attr in ['kernel_regularizer']:
-            # only add regularization to Conv2D-Layers
             if hasattr(layer, attr):
                 setattr(layer, attr, regularizer)
 
@@ -275,6 +286,7 @@ def add_regularization(model, regularizer=tf.keras.regularizers.l2(0.01)):
 # (slightly modified) source:
 # https://machinelearningmastery.com/using-learning-rate-schedules-deep-learning-models-python-keras/
 def step_decay(epoch):
+    """Schedule the learning rate while training the model."""
     initial_lrate = 0.1
     drop = 0.5
     epochs_drop = 10.0
@@ -283,6 +295,8 @@ def step_decay(epoch):
 
 
 def save_history(history, output_directory, file_name):
+    """Save the history of the metrics (e.g. MAE) in the given output
+    directory."""
     out = Path(output_directory)
     out.mkdir(parents=True, exist_ok=True)
     with open(Path(out, file_name), 'w') as txt_file:

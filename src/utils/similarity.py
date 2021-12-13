@@ -11,6 +11,10 @@ from skimage.metrics import structural_similarity, peak_signal_noise_ratio
 
 
 def compare_polygons_with_lengths_and_angles(prototype, instance_points):
+    """Compare two polygons represented by the edge lengths and the angles
+    between adjacent arcs. The first polygon corresponds to the considered
+    prototype, whereas the second one corresponds to the currently considered
+    still image instance."""
     prototype_points = [list(x) for x in zip(prototype.segmentation['X'],
                                              prototype.segmentation['Y'])]
     prototype_p = list(normalize_polygon(np.array(prototype_points)))
@@ -36,11 +40,14 @@ def compare_polygons_with_lengths_and_angles(prototype, instance_points):
     return dist
 
 
-# compare two polygons whereas first polygon is rotated (from -pi/8 to +pi/8)
-# and each point of it is used as starting point for dtw once
-def compare_polygons_rotation_translation_invariant(prototype, instance_points,
-                                                    rotation_extent=np.pi / 8,
-                                                    num_rotations=9):
+def compare_polygons_rotation_translation_invariant(prototype, instance_points):
+    """Compare two polygons represented by the coordinates of the vertices
+    and the angles with respect to the centroid of the polygon.
+    The first polygon corresponds to the considered prototype, whereas the
+    second one corresponds to the currently considered still image instance.
+    The prototype polygon is rotated (from -pi/8 to +pi/8) in order to make
+    the comparison rotation invariant. Both polygons are normalized and shifted
+    by the mean in order to make the comparison invariant to translation."""
     instance_p = normalize_polygon(np.array(instance_points))
     instance_center = np.array(np.mean(instance_p, axis=0))
     instance_angles = list(angles_to_centroid(instance_p, instance_center))
@@ -66,10 +73,8 @@ def compare_polygons_rotation_translation_invariant(prototype, instance_points,
     return min_dist
 
 
-# rotate points about center point by angle using rotation matrix
-# first subtract center (translate), then rotate about (0,0) and
-# add center again (untranslate)
 def rotate_polygon(points, center, angle=np.pi / 8):
+    """Rotate points about center point by angle using rotation matrix."""
     rotated_points = np.dot(
         points - center,
         np.array([[np.cos(angle), np.sin(angle)],
@@ -79,33 +84,37 @@ def rotate_polygon(points, center, angle=np.pi / 8):
 
 
 def normalize_polygon(points):
-    # scale points (x,y) of polygon:
-    # translate using polygon mean, i.e. translate such that center of polygon
-    # is at (0,0), then normalize by dividing by std_y
-    # x' = (x - mean_x) / std_y
-    # y' = (y - mean_y) / std_y
+    """Normalize polygon by adjusting each of its vertices (x,y):
+    Translate using polygon mean, i.e. translate such that center of polygon
+    # is at (0,0).
+    Then normalize by dividing by std_y:
+        x' = (x - mean_x) / std_y
+        y' = (y - mean_y) / std_y."""
     mean = np.mean(points, axis=0)
     std_y = np.std(points, axis=0)[0]
     points = (points - mean) / std_y
     return points
 
 
-# compare lists of points of two polygons using dtw
-# whereas each point of first polygon is used as starting point once
-def compare_polygons_multiple_dtw(features_1, features_2):
-    # based on polygon/HMM similarity paper
-    min_align_distance = dtw(features_1, features_2,
+def compare_polygons_multiple_dtw(polygon_1, polygon_2):
+    """
+    Compare lists of points of two polygons using dynamic time warping,
+    whereas each point of first polygon is used as starting point once.
+    @return minimum distance of the optimal alignment
+    """
+    min_align_distance = dtw(polygon_1, polygon_2,
                              keep_internals=False).distance
     min_index = 0
-    for i in range(len(features_1)):
-        features_1 = features_1[i:] + features_1[:i]
-        alignment = dtw(features_1, features_2, keep_internals=False)
+    for i in range(len(polygon_1)):
+        polygon_1 = polygon_1[i:] + polygon_1[:i]
+        alignment = dtw(polygon_1, polygon_2, keep_internals=False)
         min_align_distance = min(min_align_distance, alignment.distance)
     return min_align_distance
 
 
-# compare angles of two polygons (just one by one)
 def compare_angles(points_1, points_2):
+    """Compare the angles between adjacent edges of two polygons (just one
+    by one)."""
     angles_1 = angles_to_adjacent_edge(points_1)
     angles_2 = angles_to_adjacent_edge(points_2)
     diff = 0
@@ -117,6 +126,7 @@ def compare_angles(points_1, points_2):
 # source for idea, slightly modified:
 # https://stackoverflow.com/questions/30271926/python-algorithm-how-to-do-simple-geometry-shape-match
 def angles_to_adjacent_edge(points):
+    """Get the angle between two adjacent edges."""
     def vector(tail, head):
         return tuple(h - t for h, t in zip(head, tail))
 
@@ -135,6 +145,8 @@ def angles_to_adjacent_edge(points):
 
 
 def angles_to_centroid(points, center):
+    """Get the angle of a vertex with respect to the center of the polygon
+    segmentation."""
     pts = np.array([np.array(p) for p in points])
     center = np.array(center)
     angles = []
@@ -152,6 +164,8 @@ def angles_to_centroid(points, center):
 
 
 def calculate_edges_lengths(points):
+    """Calculate the lengths of the edges defined by the given points,
+    corresponding to a polygon segmentation."""
     points = points[:] + points[0:1]  # repeat first point at end
     lengths = []
     for p0, p1 in zip(points, points[1:]):
@@ -162,6 +176,12 @@ def calculate_edges_lengths(points):
 def get_most_similar_prototype(prototypes, image, volume_tracings_dict,
                                rotation_extent, num_rotations,
                                weights=[0.5, 0.5]):
+    """
+    Calculate the most similar prototype to the given still image when the
+    given variant of similarity measurement is used.
+    @return most similar prototype including metadata (file names, volumes,
+    predictions, distance of volumes, features and shapes)
+    """
     # get polygon of current instance
     instance_polygon = Polygon(zip(
         ast.literal_eval(volume_tracings_dict[image.file_name]['X']),
@@ -222,6 +242,9 @@ def get_most_similar_prototype(prototypes, image, volume_tracings_dict,
 
 def get_most_similar_prototype_index(feature_diff, shape_diff, transformer,
                                      weights):
+    """Get the index of a list of distances where the minimum distance is
+    reached. The distance can be a weighted sum combining feature and shape
+    distances."""
     # calculate standardized weighted sum
     evaluation = [list(x) for x in zip(feature_diff, shape_diff)]
     eval_ft = transformer.fit_transform(evaluation)
@@ -232,6 +255,7 @@ def get_most_similar_prototype_index(feature_diff, shape_diff, transformer,
 
 
 def get_most_similar_prototype_ssim(prototypes, image, features=True):
+    """Use Structural Similarity in order to find the most similar prototype."""
     most_similar_index = 0
     most_similar = prototypes[most_similar_index]
     if features:
@@ -263,6 +287,7 @@ def get_most_similar_prototype_ssim(prototypes, image, features=True):
 
 
 def get_most_similar_prototype_psnr(prototypes, image, features=True):
+    """Use Peak Signal Noise Ratio in order to find the most similar prototype."""
     most_similar_index = 0
     most_similar = prototypes[most_similar_index]
     if features:

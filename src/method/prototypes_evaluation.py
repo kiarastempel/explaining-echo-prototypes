@@ -1,5 +1,6 @@
 from __future__ import division
 import argparse
+import json
 import numpy as np
 import pandas as pd
 from src.utils import read_helpers as rh, similarity as sim
@@ -7,7 +8,7 @@ from pathlib import Path
 from tensorflow import keras
 from skimage.metrics import structural_similarity, peak_signal_noise_ratio
 from prototypes_calculation import get_images_of_prototypes
-from src.model.two_d_resnet import get_data
+from model.two_d_resnet import get_data
 
 
 def main():
@@ -91,16 +92,17 @@ def evaluate_prototypes(volume_cluster_borders,
                         test_still_images, test_volumes, test_filenames,
                         model_path, hidden_layer_index,
                         output_directory):
-    # iterate over testset/trainingset:
-    #   (1) get for current instance the corresponding volume-cluster
-    #   by choosing the closest center
-    #   (2) compare the extracted features of current test image to all
-    #   prototypes of the volume cluster selected in (1) and
-    #   return the most similar
-    #   (3) calculate distance to most similar prototype selected in (2) with
-    #   given distance/similarity measure
-    # save/evaluate distances
-
+    """Evaluate the found prototypes by selecting the prototypes for training and
+    test data instances and also for the prototypes themselves.
+    Therefore, iterate over testset/trainingset:
+      (1) get for current instance the corresponding volume cluster
+      by choosing the closest center
+      (2) compare the extracted features of current test image to all
+      prototypes of the volume cluster selected in (1) and
+      return the most similar
+      (3) calculate distance to most similar prototype selected in (2) with
+      given distance/similarity measure
+    Then, the distances are saved and evaluated."""
     # load model
     print('Start loading model')
     model = keras.models.load_model(model_path)
@@ -145,7 +147,8 @@ def calculate_distances(volume_cluster_borders,
                         prototypes, volume_tracings_dict,
                         predicting_model, extractor,
                         output_directory, data='test'):
-    # save prototypes which are most similar
+    """For the given set of still images, save the chosen prototypes which are
+    most similar (for each instance separately)."""
     chosen_prototypes = []
 
     for i in range(len(still_images)):
@@ -242,6 +245,8 @@ def calculate_distances(volume_cluster_borders,
 
 
 def save_metadata(diffs, output_file):
+    """Save metadata of a list of distances to closest prototypes, i.e.
+    maximum, minimum, sum, mean and standard deviation of the distances."""
     metadata = {
         'max': str(max(diffs)),
         'min': str(min(diffs)),

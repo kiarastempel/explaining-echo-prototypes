@@ -1,9 +1,9 @@
 import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
-import read_helpers as rh
 from statistics import mean, stdev
 from pathlib import Path
+import utils.read_helpers as rh
 
 
 def main():
@@ -42,16 +42,21 @@ def main():
 
 def rank_comparison(output_directories, chosen_prototypes_file,
                     prototypes_filename, frame_volumes_path):
+    """Calculate the ranks of the prototypes:
+    Sorting the instances according to feature distance to closest prototype
+    results in their feature distance ranks, while sorting the instances
+    according to the corresponding prediction error results in their
+    prediction error ranks.
+    The distance of the two ranks is calculated for each instance and then
+    each rank distance is assigned to the closest prototype of the instance.
+    The average rank distance of all instances assigned to a prototype
+    is then defined as the rank of the prototype."""
     ranks = []
     for output_directory in output_directories:
         # get most similar prototypes for instances
         chosen_prototypes_path = Path(output_directory, chosen_prototypes_file)
         chosen_prototypes_frame = pd.read_csv(chosen_prototypes_path)
 
-        # sort instances according to feature distance to closest prototype
-        # -> results in feature distance rank
-        # sort instances according to prediction error
-        # -> results in prediction error rank
         chosen_prototypes_frame['rank_euclidean_diff_features'] \
             = chosen_prototypes_frame['euclidean_diff_features'].rank(method='min')
         chosen_prototypes_frame['rank_euclidean_prediction_error'] \
@@ -101,6 +106,7 @@ def rank_comparison(output_directories, chosen_prototypes_file,
 
 
 def update_prototype_rank(prototypes, prototype_file_name, feature_rank, error_rank):
+    """Assign ranks of instance to closest prototype."""
     for i in range(len(prototypes)):
         for j in range(len(prototypes[i])):
             if prototype_file_name == prototypes[i][j].file_name:
@@ -110,6 +116,8 @@ def update_prototype_rank(prototypes, prototype_file_name, feature_rank, error_r
 
 
 def calculate_rank_distances(prototypes):
+    """Calculate the sum and number of distances of ranks assigned to each
+    prototype."""
     del_indices = []
     sum_distances = 0
     sum_distances_positive = 0

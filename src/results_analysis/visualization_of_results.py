@@ -113,6 +113,8 @@ def main():
 def plot_diffs_and_prediction_error_points(
         diffs, prediction_error, similarity_measure='Cosine similarity',
         diffs_type='features'):
+    """Scatter plot of correlation of distance to closest prototype and
+    prediction error."""
     plt.plot(diffs, prediction_error, 'o', markersize='2')
     plt.xlabel(similarity_measure + ' to closest prototype ' + diffs_type)
     plt.ylabel('Prediction error')
@@ -124,6 +126,8 @@ def plot_diffs_and_prediction_error_points(
 
 def two_d_hist(diffs, prediction_error, similarity_measure='Cosine similarity',
                diffs_type='features', label_size=21, ticks_size=17):
+    """Plot two-dimensional histogram showing correlation of distance to
+    closest prototype and prediction error."""
     plt.hist2d(diffs, prediction_error, bins=(50, 50), cmap=plt.cm.jet)
     for i in range(len(diffs)):
         if diffs[i] < 0:
@@ -140,6 +144,8 @@ def two_d_hist(diffs, prediction_error, similarity_measure='Cosine similarity',
 
 def hist_of_diffs(diffs, similarity_measure='Cosine similarity',
                   diffs_type='features'):
+    """Plot histogram showing the distribution of distances to most similar
+    prototype."""
     plt.hist(diffs, bins=int(0.25 / 0.01))
     plt.plot([np.mean(diffs) for i in
               range(len(diffs))], label='mean distance')
@@ -154,6 +160,8 @@ def hist_of_diffs(diffs, similarity_measure='Cosine similarity',
 
 def plot_diffs(diffs, similarity_measure='Euclidean distance',
                diffs_type='features'):
+    """Plot the distance to the corresponding closest prototype of each
+    instance."""
     plt.plot(diffs, 'o')
     plt.plot([np.mean(diffs) for i in range(len(diffs))], label='mean')
     plt.xlabel('Index of echocardiogram')
@@ -164,6 +172,8 @@ def plot_diffs(diffs, similarity_measure='Euclidean distance',
 
 
 def multiple_boxplots(diffs, labels, title):
+    """Plot boxplots of the distances to the corresponding closest prototype
+    of each instance."""
     # Multiple box plots on one axis
     fig, ax = plt.subplots()
     ax.boxplot(diffs, labels=labels)
@@ -172,6 +182,7 @@ def multiple_boxplots(diffs, labels, title):
 
 
 def scatter_plot(x, y, x_label, y_label, title):
+    """Plot a scatter plot using the given x and y value pairs."""
     plt.plot(x, y, 'o')
     plt.xlabel(x_label)
     plt.ylabel(y_label)
@@ -180,6 +191,8 @@ def scatter_plot(x, y, x_label, y_label, title):
 
 
 def get_column_of_all_csv(csv_list, col, scale=False):
+    """Get the values of the given column for all csv files contained in the
+    list. All csv files should contain the given column."""
     columns = []
     scaler = MinMaxScaler()
     for csv_file in csv_list:

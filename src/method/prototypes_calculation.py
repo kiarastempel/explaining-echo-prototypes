@@ -2,8 +2,8 @@ import argparse
 import numpy as np
 import os
 from pathlib import Path
-from src.model.two_d_resnet import get_data
-from src.utils import read_helpers as rh
+from model.two_d_resnet import get_data
+from utils import read_helpers as rh
 
 
 def main():
@@ -51,6 +51,17 @@ def main():
 
 def calculate_prototypes(still_images, file_names, image_clusters_directory,
                          output_file, get_images=True):
+    """
+    Get the still image instances that correspond to the cluster centers
+    calculated using kmedoids. The prototypes are saved to files.
+    @param still_images: list containing the still image frames
+    @param file_names: file names of still images
+    @param image_clusters_directory: directory containing the clustering
+    results of kmedoids
+    @param output_file: file to save the prototypes in
+    @param get_images: true if the frames (consisting of pixels) of the
+    prototypes should be saved in addition to the latent features
+    """
     num_volume_clusters = int(len(os.listdir(image_clusters_directory)) / 2)
     prototypes, volume_cluster_sizes, volume_cluster_means, volume_cluster_stds, image_cluster_sizes, image_cluster_means, image_cluster_stds \
         = get_kmedoids_prototypes_data(
@@ -90,6 +101,8 @@ def calculate_prototypes(still_images, file_names, image_clusters_directory,
 
 
 def get_images_of_prototypes(prototypes, still_images, file_names):
+    """Get the real images that correspond to the file names of the
+    prototypes."""
     file_names = list(file_names)
     for i in range(len(prototypes)):
         for j in range(len(prototypes[i])):
@@ -102,10 +115,13 @@ def get_images_of_prototypes(prototypes, still_images, file_names):
 def get_kmedoids_prototypes_data(num_volume_clusters, image_clusters_directory):
     """
     Calculate prototypes of image clustering created by kmedoids, where a
-    prototype is defined as the medoid of an image cluster (i.e. it is an existing image).
-    @param num_volume_clusters: number of clusters produced while clustering by volume
+    prototype is defined as the medoid of an image cluster (i.e. it is an
+    existing image).
+    @param num_volume_clusters: number of clusters produced while clustering by
+    volume
     @param image_clusters_directory: directory containing image cluster labels
-    @return: Returns map of prototypes, mapping from volume-cluster-index to a list
+    @return: Returns map of prototypes, mapping from volume-cluster-index to a
+    list
     of prototypes (one for each image cluster belonging to that volume cluster)
     """
     # here prototypes correspond to cluster centers of image clusters

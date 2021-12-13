@@ -4,9 +4,6 @@ import matplotlib.pyplot as plt
 from numpy import trapz
 
 
-# plot average prediction error of 'best' (i.e. highest cosine similarity)
-# instances, i.e. instances with cosine similarity lying
-# in interval [0, x] (x = x axis)
 def applicability_domain_by_interval(differences, prediction_errors, labels,
                                      num_contained_prototypes=0,
                                      similarity_measure='Euclidean Distance',
@@ -14,6 +11,9 @@ def applicability_domain_by_interval(differences, prediction_errors, labels,
                                      num_cut_offs=1000,
                                      label_size=12, ticks_size=12,
                                      ylabel='Average prediction error'):
+    """Plot average prediction error of 'best' (i.e. highest cosine similarity)
+    instances, i.e. instances with cosine similarity lying in interval [0, x]
+    (x = x axis)."""
     # sort errors by corresponding ascending distance to prototype
     sorted_diffs, sorted_errors = sort_errors_by_diffs(differences,
                                                        prediction_errors,
@@ -83,8 +83,6 @@ def applicability_domain_by_interval(differences, prediction_errors, labels,
         print('Area under curve', labels[i], ':', '%.2f' % area)
 
 
-# plot average prediction error of 'best' (i.e. closest prototype)
-# n (= x axis) instances
 def applicability_domain_by_amount(differences, prediction_errors, labels,
                                    num_contained_prototypes=0,
                                    similarity_measure='Euclidean Distance',
@@ -93,6 +91,8 @@ def applicability_domain_by_amount(differences, prediction_errors, labels,
                                    label_size=13, ticks_size=15,
                                    ylabel='Average prediction error',
                                    window_size=15):
+    """Plot average prediction error of 'best' (i.e. closest prototype)
+    n (= x axis) instances."""
     # sort errors by corresponding ascending distance to prototype
     sorted_diffs, sorted_errors = sort_errors_by_diffs(differences,
                                                        prediction_errors,
@@ -133,6 +133,8 @@ def applicability_domain_by_amount(differences, prediction_errors, labels,
 
 def sort_errors_by_diffs(differences, prediction_errors, similarity_measure,
                          num_contained_prototypes):
+    """Sort prediction errors by corresponding ascending distance to
+    prototype."""
     diffs = []
     for d in differences:
         diffs.append(np.array(d))
@@ -159,6 +161,7 @@ def sort_errors_by_diffs(differences, prediction_errors, similarity_measure,
 
 
 def save_applicability_domain(cut_off_amounts, mean_errors_cut, labels, path):
+    """Save the x/y-pairs of the applicability domain to a csv file."""
     df = pd.DataFrame({'cut_off': cut_off_amounts,
                        labels + '_error': mean_errors_cut
                        })
@@ -166,7 +169,9 @@ def save_applicability_domain(cut_off_amounts, mean_errors_cut, labels, path):
 
 
 def running_mean(window_size, cut_off_amounts, mean_errors_cut, labels):
-    # save running mean every window_size=10 points (window size=window_size)
+    """Calculate running mean by calculating the mean for a sliding window with
+    given window size. Every window_size-th mean is saved/printed."""
+    # save
     for i in range(len(labels)):
         means = []
         for j in range(int(len(cut_off_amounts[0:200]) / window_size) - 1):

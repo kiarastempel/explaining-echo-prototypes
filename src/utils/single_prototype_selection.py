@@ -1,10 +1,10 @@
 import argparse
 import numpy as np
-from src.utils import read_helpers as rh
 import cv2
 from PIL import Image
 from pathlib import Path
 from tensorflow import keras
+from utils import read_helpers as rh
 
 
 def main():
@@ -55,6 +55,8 @@ def calculate_prototype(volume_cluster_borders,
                         prototypes,
                         model_path, hidden_layer_index,
                         input_directory, file):
+    """Select the most similar prototype to the given still image file
+    when for similarity measuring only the feature distance is considered."""
     # load model
     print('Start loading model')
     model = keras.models.load_model(model_path)

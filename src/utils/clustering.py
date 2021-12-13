@@ -11,6 +11,16 @@ import pandas
 
 
 def jenks_caspall(data, sort_col, n_clusters):
+    """
+    Apply Jenks Caspall algorithm on given data in order to
+    find the optimal interval borders or natural breaks.
+    @param data: dataframe for which the interval borders should be found, can
+    consist of multiple columns
+    @param sort_col: the column containig the one-dimensional values used for
+    finding the interval borders
+    @param n_clusters: number of desired intervals
+    @return: interval borders, data labeled with interval or cluster indices
+    """
     data.sort_values(by=sort_col)
     breaks = jenkspy.jenks_breaks(data[sort_col], nb_class=n_clusters)
     labels = [str(i) for i in range(0, n_clusters)]
@@ -24,27 +34,26 @@ def jenks_caspall(data, sort_col, n_clusters):
 
 def k_medoids_comparing_cluster_number(data, n, max_iter=500, plot=False,
                                        all_scores=False):
+    """Apply kmedoids on the given data. Each possible value for the number of
+    clusters between 2 and the given maximum (n) is tried for execution of
+    kmedoids. Then, the best number according to the elbow method is chosen."""
     # try each value between 2 and given maximum number of clusters
     kme = [KMedoids(n_clusters=k, init='window_size-medoids++', max_iter=max_iter)
            for k in range(2, n + 1)]
-    return compare_n_clusters(kme, data, n, plot, all_scores)
-
-
-def compare_n_clusters(cl_instances, data, n, plot=False, all_scores=False):
     sse = []
     for k in range(0, n - 1):
-        sse.append(cl_instances[k].fit(data).inertia_)
+        sse.append(kme[k].fit(data).inertia_)
     if all_scores:
         # score: opposite of the distance between the data samples and their
         # associated cluster centers (which is our objective)
-        scores = [(cl_instances[k].fit(data).score(
+        scores = [(kme[k].fit(data).score(
             data)) for k in range(0, n - 1)]
         silhouette_scores = [metrics.silhouette_score(
-            data, cl_instances[k].fit(data).labels_) for k in range(0, n - 1)]
+            data, kme[k].fit(data).labels_) for k in range(0, n - 1)]
         dbs = [metrics.davies_bouldin_score(
-            data, cl_instances[k].fit(data).labels_) for k in range(0, n - 1)]
+            data, kme[k].fit(data).labels_) for k in range(0, n - 1)]
         chs = [metrics.calinski_harabasz_score(
-            data, cl_instances[k].fit(data).labels_) for k in range(0, n - 1)]
+            data, kme[k].fit(data).labels_) for k in range(0, n - 1)]
     if plot:
         plot_scores(range(2, n + 1), sse, 'SSE')
         if all_scores:
@@ -55,19 +64,22 @@ def compare_n_clusters(cl_instances, data, n, plot=False, all_scores=False):
         plt.show()
     best_index = find_best_cluster_number(sse)
     print('Best found number of clusters regarding SSE: ' + str(best_index + 2))
-    cl_instances[best_index].fit_transform(data)
-    cluster_labels = cl_instances[best_index].predict(data)
-    cluster_centers = cl_instances[best_index].cluster_centers_
+    kme[best_index].fit_transform(data)
+    cluster_labels = kme[best_index].predict(data)
+    cluster_centers = kme[best_index].cluster_centers_
     if all_scores:
         return cluster_labels, cluster_centers, sse, silhouette_scores, dbs, chs
     return cluster_labels, cluster_centers, sse
 
 
-# using elbow method: find elbow of the curve corresponding to SSE
-# calculate for each possible number of clusters the distance from the
-# corresponding point of the curve to the straight line defined by
-# the first and the last point of the curve
 def find_best_cluster_number(measures):
+    """Find the best number of clusters using elbow method: find the elbow of
+    the curve corresponding to the measures (e.g. SSE).
+    For that purpose, calculate for each possible number of clusters the
+    distance from the corresponding point of the curve to the straight line
+    defined by the first and the last point of the curve.
+    The elbow is found when the distance to the line does not increase
+    anymore."""
     largest_distance = 0.0
     best_number = 0
     if len(measures) <= 1:
@@ -87,8 +99,8 @@ def find_best_cluster_number(measures):
 
 
 def distance_point_to_line(x0, y0, x1, y1, x2, y2):
-    # Calculates distance from point (x0, y0) to line defined by
-    # (x1, y1) and (x2, y2)
+    """Calculates distance from point (x0, y0) to line defined by
+    # (x1, y1) and (x2, y2)."""
     dx = x2 - x1
     dy = y2 - y1
     if dx == 0 and dy == 0:
@@ -98,6 +110,7 @@ def distance_point_to_line(x0, y0, x1, y1, x2, y2):
 
 
 def plot_scores(nc, scores, title):
+    """Plot the given measure in relation to the number of clusters."""
     plt.xticks(fontsize=12)
     plt.yticks(fontsize=12)
     plt.scatter(nc, scores)
@@ -107,6 +120,8 @@ def plot_scores(nc, scores, title):
 
 
 def kde(data, bw_method):
+    """Use kernel density estimation in order to find the optimal interval
+    borders."""
     data = np.array(data)
     bandwidth = select_bandwidth(data, bw=bw_method, kernel=None)
     kde = KernelDensity(kernel='gaussian', bandwidth=bandwidth).fit(data)

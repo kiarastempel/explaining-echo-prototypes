@@ -2,8 +2,8 @@ import argparse
 import numpy as np
 from pathlib import Path
 from tensorflow import keras
-from src.model.two_d_resnet import get_data
-from src.utils import read_helpers as rh
+from model.two_d_resnet import get_data
+from utils import read_helpers as rh
 
 
 def main():
@@ -47,12 +47,23 @@ def main():
 
 def extract_features(model_path, hidden_layer_index, volume_cluster_labels,
                      train_dataset, output_directory):
+    """
+    Extract features of all still images of each volume cluster at the given
+    hidden layer index. The latent features are saved to files.
+    @param model_path: model to use for latent feature extraction
+    @param hidden_layer_index:  index of layer of model from which the features
+    should be extracted
+    @param volume_cluster_labels: cluster labels of volume clustering done
+    before
+    @param train_dataset: dataset consisting of training and validation data
+    @param output_directory: directory for saving the extracted features
+    """
     # load model
     print('Start loading model')
     model = keras.models.load_model(model_path)
     print('End loading model')
 
-    # extract features of videos of each volume-cluster at given hidden layer index
+    # extract features
     if hidden_layer_index is None:
         hidden_layer_index = len(model.layers) - 2
     num_volume_clusters = max(volume_cluster_labels) + 1
@@ -72,8 +83,8 @@ def extract_features(model_path, hidden_layer_index, volume_cluster_labels,
 def get_hidden_layer_features(model, train_dataset, cluster_labels,
                               volume_cluster_index, hidden_layer_index):
     """
-    Extract features at given layer_index of given model for all
-    training instances.
+    Extract features at given layer_index of given model for the given
+    volume cluster.
     @return: list of features
     """
     extractor = keras.Model(inputs=[model.input],
