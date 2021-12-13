@@ -12,7 +12,7 @@ def main():
                         default='../../data/still_images',
                         help='Directory with still images.')
     parser.add_argument('-o', '--output_directory',
-                        help='Directory to save prototypes and evaluations in')
+                        help='Directory to save prototypes and evaluations in.')
     parser.add_argument('-p', '--prototypes_filename', default='prototypes.txt',
                         help='Name of file to save prototypes in')
     parser.add_argument('-fv', '--frame_volumes_filename',

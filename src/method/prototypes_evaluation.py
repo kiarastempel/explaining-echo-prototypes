@@ -27,7 +27,7 @@ def main():
                         help='Name of the file containing frame volumes.')
     parser.add_argument('-cc', '--volume_cluster_centers_file',
                         default='../../data/clustering_volume/cluster_centers_esv.txt',
-                        help='Path to file containing volume cluster labels')
+                        help='Path to file containing volume cluster labels.')
     parser.add_argument('-cb', '--volume_cluster_borders_file',
                         default='../../data/clustering_volume/cluster_upper_borders_esv.txt',
                         help='Path to file containing volume cluster upper borders')

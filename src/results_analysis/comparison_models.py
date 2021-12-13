@@ -10,8 +10,7 @@ def main():
     parser.add_argument('-i', '--input_directories', nargs='+',
                         default=['../../data/model_evaluations/metrics_history'],
                         help='Directories with model evaluations.')
-    parser.add_argument('-o', '--output_directory',
-                        default='../../data',
+    parser.add_argument('-o', '--output_directory', default='../../data',
                         help='Directory for saving model comparison.')
     args = parser.parse_args()
     input_directories = args.input_directories

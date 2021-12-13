@@ -18,7 +18,7 @@ def main():
     parser.add_argument('-f', '--file', default='0X1A2C60147AF9FDAE_62.png',
                         help='Image whose prototype should be calculated')
     parser.add_argument('-p', '--prototypes_filename', default='prototypes_esv.txt',
-                        help='Name of file containing prototypes')
+                        help='Name of file containing prototypes.')
     parser.add_argument('-fv', '--frame_volumes_filename',
                         default='FrameVolumes.csv',
                         help='Name of the file containing frame volumes.')

@@ -57,7 +57,7 @@ def read_extracted_features(file_path):
 
 def read_image_clusters(cluster_labels_file, image_features_file):
     # list of clusters
-    # where each cluster is a list of its corresponding images
+    # where each cluster is a list of its corresponding still images
     cluster_features = []
 
     image_cluster_labels, volume_file, file_names = \

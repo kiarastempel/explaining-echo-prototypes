@@ -106,7 +106,7 @@ def rank_comparison(output_directories, chosen_prototypes_file,
 
 
 def update_prototype_rank(prototypes, prototype_file_name, feature_rank, error_rank):
-    """Assign ranks of instance to closest prototype."""
+    """Assign the ranks of instance to closest prototype."""
     for i in range(len(prototypes)):
         for j in range(len(prototypes[i])):
             if prototype_file_name == prototypes[i][j].file_name:

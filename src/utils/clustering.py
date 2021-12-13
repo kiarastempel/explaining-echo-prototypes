@@ -12,7 +12,7 @@ import pandas
 
 def jenks_caspall(data, sort_col, n_clusters):
     """
-    Apply Jenks Caspall algorithm on given data in order to
+    Apply the Jenks Caspall algorithm on given data in order to
     find the optimal interval borders or natural breaks.
     @param data: dataframe for which the interval borders should be found, can
     consist of multiple columns

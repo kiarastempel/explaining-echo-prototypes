@@ -170,7 +170,7 @@ def save_applicability_domain(cut_off_amounts, mean_errors_cut, labels, path):
 
 def running_mean(window_size, cut_off_amounts, mean_errors_cut, labels):
     """Calculate running mean by calculating the mean for a sliding window with
-    given window size. Every window_size-th mean is saved/printed."""
+    given window size. Every window_size-th mean is saved or printed."""
     # save
     for i in range(len(labels)):
         means = []

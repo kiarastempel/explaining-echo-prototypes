@@ -192,7 +192,7 @@ def scatter_plot(x, y, x_label, y_label, title):
 
 def get_column_of_all_csv(csv_list, col, scale=False):
     """Get the values of the given column for all csv files contained in the
-    list. All csv files should contain the given column."""
+    given list. All csv files should contain the given column."""
     columns = []
     scaler = MinMaxScaler()
     for csv_file in csv_list:

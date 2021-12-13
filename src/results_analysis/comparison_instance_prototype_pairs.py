@@ -53,7 +53,7 @@ def plot_segmentation_comparisons(chosen_prototypes_frame,
                                   volume_tracings_dict,
                                   rotation_extent, num_rotations):
     """Plot the segmentations of instance and selected most similar prototype
-    for comparison while iterating over all instances contained in
+    for comparison while iterating over all instances contained in given
     chosen_prototypes_frame.
     The corresponding calculated distances of volumes, features and shapes
     are displayed."""

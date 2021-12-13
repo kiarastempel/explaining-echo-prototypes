@@ -11,7 +11,8 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input_directory', default='../../data',
+    parser.add_argument('-i', '--input_directory',
+                        default='../../data',
                         help='Directory with the echocardiograms.')
     parser.add_argument('-o', '--output_directory',
                         help='Directory to save still images in.')

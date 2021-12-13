@@ -257,7 +257,7 @@ def get_resnet18_model(l2_reg, dropout=0.1):
 
 # (slightly modified) source: https://sthalles.github.io/keras-regularizer/
 def add_regularization(model, regularizer=tf.keras.regularizers.l2(0.01)):
-    """Add regularization to all Conv2D layers"""
+    """Add regularization to all Convolution-2D layers"""
     if not isinstance(regularizer, tf.keras.regularizers.Regularizer):
         print('Regularizer must be a subclass of tf.keras.regularizers.Regularizer')
         return model

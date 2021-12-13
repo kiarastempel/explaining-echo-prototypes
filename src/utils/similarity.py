@@ -12,7 +12,7 @@ from skimage.metrics import structural_similarity, peak_signal_noise_ratio
 
 def compare_polygons_with_lengths_and_angles(prototype, instance_points):
     """Compare two polygons represented by the edge lengths and the angles
-    between adjacent arcs. The first polygon corresponds to the considered
+    between two adjacent arcs. The first polygon corresponds to the considered
     prototype, whereas the second one corresponds to the currently considered
     still image instance."""
     prototype_points = [list(x) for x in zip(prototype.segmentation['X'],

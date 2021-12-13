@@ -14,7 +14,7 @@ def main():
                         default='../../data/still_images',
                         help='Directory with still images.')
     parser.add_argument('-o', '--output_directory',
-                        help='Directory to save the cluster labels in')
+                        help='Directory to save the cluster labels in.')
     parser.add_argument('-fv', '--frame_volumes_filename',
                         default='FrameVolumes.csv',
                         help='Name of the file containing frame volumes.')

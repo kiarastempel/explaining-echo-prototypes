@@ -18,7 +18,7 @@ def main():
                         help='Name of the metadata file.')
     parser.add_argument('-fv', '--frame_volumes_filename',
                         default='FrameVolumes.csv',
-                        help='Name of the file containing frame volumes.')
+                        help='Name of the file containing the frame volumes.')
     args = parser.parse_args()
 
     # distribution of data
