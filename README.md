@@ -9,7 +9,7 @@ be any other predicted parameter.
 
 In order to apply the method using a dataset which consists of echocardiograms
 with corresponding known ESV/EDV frame positions, volumes, and 
-possibly segmentations of the left ventricle in the form of
+possibly segmentations of the left ventricle of the heart in the form of
 coordinate pairs, the following steps have to be executed:
 
 ## Preprocessing: Extraction of Still Images
