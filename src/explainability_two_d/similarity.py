@@ -1,4 +1,4 @@
-from __future__ import division  # to avoid integer devision problem
+from __future__ import division
 import math
 import numpy as np
 import ast
