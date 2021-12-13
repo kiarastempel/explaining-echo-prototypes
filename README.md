@@ -50,7 +50,7 @@ For this purpose, adjust the following part of *compare_polygons_rotation_transl
                                     instance_features[i])
         min_dist = min(min_dist, dist)
 ```
-The standard variant is the weighted sum
+The standard variant of get_most_similar_prototype* is the weighted sum
 combining half of feature distance and half of shape distance
 (which is calculated by using Euclidean distance).
 
