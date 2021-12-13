@@ -8,14 +8,14 @@ tqdm~=4.59.0
 pandas~=1.2.4
 seaborn~=0.11.1
 matplotlib~=3.3.4
--e git+https://github.com/okankop/vidaug#egg=vidaug
 scikit-image~=0.18.1
 scikit-learn~=0.24.1
 scipy~=1.6.3
 statsmodels~=0.12.1
 jenkspy~=0.2.0
 pathlib~=1.0.1
-alibi~=0.5.7
+dtw-python~=1.1.10
 
 -e git+https://github.com/qubvel/classification_models#egg=classification_models
-torchvision~=0.9.1
+Shapely~=1.7.1
+Keras~=2.4.3
