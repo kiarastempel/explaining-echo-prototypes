@@ -6,6 +6,7 @@ neural network outputs by comparing a new input to an already
 labeled similar prototypical still image. Here, the prediction
 of the blood volume of the left ventricle is considered, but it can
 be any other predicted parameter.
+
 In order to apply the method using a dataset which consists of echocardiograms
 with corresponding known ESV/EDV frame positions, volumes, and 
 possibly segmentations of the left ventricle in the form of
