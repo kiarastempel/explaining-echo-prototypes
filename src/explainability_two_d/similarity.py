@@ -1,11 +1,10 @@
 from __future__ import division  # to avoid integer devision problem
 import math
 import numpy as np
+import ast
 from shapely.geometry import Polygon
 from dtw import *
-from pathlib import Path
-from tensorflow import keras
-from sklearn.preprocessing import StandardScaler, Normalizer
+from sklearn.preprocessing import StandardScaler
 from scipy.spatial.distance import euclidean
 from sklearn.metrics.pairwise import cosine_similarity
 from skimage.metrics import structural_similarity, peak_signal_noise_ratio
@@ -51,8 +50,6 @@ def compare_polygons_rotation_translation_invariant(prototype, instance_points,
     min_dist = dtw(prototype.normalized_rotations[0],
                    instance_features).distance
 
-    angles = np.linspace(-rotation_extent, rotation_extent, num=num_rotations,
-                         endpoint=True)
     for prototype_rotation_features in prototype.normalized_rotations:
         # uncomment to use dtw with rotating starting point
         # dist = compare_polygons_multiple_dtw(prototype_rotation_features, instance_features)
@@ -72,7 +69,7 @@ def compare_polygons_rotation_translation_invariant(prototype, instance_points,
 # rotate points about center point by angle using rotation matrix
 # first subtract center (translate), then rotate about (0,0) and
 # add center again (untranslate)
-def rotate_polygon(points, center, angle=np.pi / 4):
+def rotate_polygon(points, center, angle=np.pi / 8):
     rotated_points = np.dot(
         points - center,
         np.array([[np.cos(angle), np.sin(angle)],
@@ -104,12 +101,6 @@ def compare_polygons_multiple_dtw(features_1, features_2):
         features_1 = features_1[i:] + features_1[:i]
         alignment = dtw(features_1, features_2, keep_internals=False)
         min_align_distance = min(min_align_distance, alignment.distance)
-        # if alignment.distance < min_align_distance:
-        #     min_align_distance = alignment.distance
-        #     min_index = i
-    # alignment.plot(type="threeway")
-    # print("Distance:", min_align_distance)
-    # print("index", min_index)
     return min_align_distance
 
 
@@ -168,16 +159,17 @@ def calculate_edges_lengths(points):
     return lengths
 
 
-def get_most_similar_prototype(prototypes, video, volume_tracings_dict,
+def get_most_similar_prototype(prototypes, image, volume_tracings_dict,
+                               rotation_extent, num_rotations,
                                weights=[0.5, 0.5]):
     # get polygon of current instance
     instance_polygon = Polygon(zip(
-        ast.literal_eval(volume_tracings_dict[video.file_name]['X']),
-        ast.literal_eval(volume_tracings_dict[video.file_name]['Y'])
+        ast.literal_eval(volume_tracings_dict[image.file_name]['X']),
+        ast.literal_eval(volume_tracings_dict[image.file_name]['Y'])
     ))
     instance_points = [list(x) for x in zip(
-        ast.literal_eval(volume_tracings_dict[video.file_name]['X']),
-        ast.literal_eval(volume_tracings_dict[video.file_name]['Y'])
+        ast.literal_eval(volume_tracings_dict[image.file_name]['X']),
+        ast.literal_eval(volume_tracings_dict[image.file_name]['Y'])
     )]
     # compare given image to all prototypes of corresponding volume cluster
     # using euclidean distance and cosine similarity
@@ -191,10 +183,10 @@ def get_most_similar_prototype(prototypes, video, volume_tracings_dict,
         if not len(instance_points) == 40 \
                 or not len(prototypes[i].segmentation['X']) == 40:
             print(prototypes[i].segmentation['X'])
-            print("skipped")
+            print('skipped')
             continue
-        euc_feature_diff.append(np.linalg.norm([np.array(video.features) - np.array(prototype.features)]))
-        cosine_feature_diff.append(-1 * (cosine_similarity(video.features, [prototype.features])[0][0]))
+        euc_feature_diff.append(np.linalg.norm([np.array(image.features) - np.array(prototype.features)]))
+        cosine_feature_diff.append(-1 * (cosine_similarity(image.features, [prototype.features])[0][0]))
 
         # Intersection of Union (IoU) of left ventricle polygons
         prototype_polygon = Polygon(zip(
@@ -208,7 +200,8 @@ def get_most_similar_prototype(prototypes, video, volume_tracings_dict,
 
         # shape similarity using polygon representations
         # by normalized coordinates, angles and rotations
-        shape_diff.append(compare_polygons_rotation_translation_invariant(prototype, instance_points))
+        shape_diff.append(compare_polygons_rotation_translation_invariant(
+            prototype, instance_points, rotation_extent, num_rotations,))
 
         # shape similarity using polygon representations
         # by edge lengths and angles between adjacent edges
@@ -222,15 +215,15 @@ def get_most_similar_prototype(prototypes, video, volume_tracings_dict,
     # get index of closest prototype regarding (1) Euclidean distance and
     # regarding (2) cosine similarity for similarity of feature vectors
     euc_index = get_most_similar_prototype_index(euc_feature_diff, shape_diff, transformer, weights)
-    cosine_index = get_most_similar_prototype_index(cosine_feature_diff, angle_diff, transformer, weights)
-    return prototypes[euc_index], euc_index, euc_feature_diff[euc_index], -1 * iou[euc_index], angle_diff[euc_index], \
-           prototypes[cosine_index], cosine_index, -1 * cosine_feature_diff[cosine_index], -1 * iou[cosine_index], angle_diff[cosine_index]
+    cosine_index = get_most_similar_prototype_index(cosine_feature_diff, shape_diff, transformer, weights)
+    return prototypes[euc_index], euc_index, euc_feature_diff[euc_index], -1 * iou[euc_index], shape_diff[euc_index], \
+           prototypes[cosine_index], cosine_index, -1 * cosine_feature_diff[cosine_index], -1 * iou[cosine_index], shape_diff[cosine_index]
 
 
 def get_most_similar_prototype_index(feature_diff, shape_diff, transformer,
                                      weights):
     # calculate standardized weighted sum
-    evaluation = [list(x) for x in zip(feature_diff, iou, shape_diff)]
+    evaluation = [list(x) for x in zip(feature_diff, shape_diff)]
     eval_ft = transformer.fit_transform(evaluation)
     weighted_sum = [weights[0] * x[0] + weights[1] * x[1] for x in eval_ft]
     # get index of prototype with minimum difference

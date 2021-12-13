@@ -1,6 +1,5 @@
 import argparse
 import pandas
-import csv
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -11,10 +10,11 @@ import clustering as cl
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input_directory', default='../../data',
-                        help="Directory with still images.")
+    parser.add_argument('-i', '--input_directory',
+                        default='../../data/still_images',
+                        help='Directory with still images.')
     parser.add_argument('-o', '--output_directory',
-                        help="Directory to save the cluster labels in")
+                        help='Directory to save the cluster labels in')
     parser.add_argument('-fv', '--frame_volumes_filename',
                         default='FrameVolumes.csv',
                         help='Name of the file containing frame volumes.')
@@ -68,14 +68,11 @@ def get_predictions(still_images, model_path):
     predictions = []
 
     # load model
-    print('Start loading model')
     model = keras.models.load_model(model_path)
     predicting_model = keras.Model(inputs=[model.input],
                                    outputs=model.layers[len(model.layers) - 1].output)
-    print('End loading model')
 
     for i in range(len(still_images)):
-        print("instance", i)
         instance = np.expand_dims(still_images[i], axis=0)
         prediction = float(predicting_model(instance).numpy()[0][0])
         predictions.append(prediction)
@@ -83,7 +80,7 @@ def get_predictions(still_images, model_path):
 
 
 def cluster_by_volume(volumes, output_directory, file_ending='', error=13.57):
-    # jenks caspall algorithm
+    # employ jenks caspall algorithm to find interval borders
     natural_breaks = []
     data = []
     num_intervals = []
@@ -98,31 +95,27 @@ def cluster_by_volume(volumes, output_directory, file_ending='', error=13.57):
             num += 1
         avg_width = width / num
         avg_widths.append(avg_width)
-        print("avg width of intervals = ", avg_width)
+        print('Average width of intervals = ', avg_width)
         if avg_width < error:
             break
 
-    with open('avg_widths' + file_ending + '.csv', 'w', newline='') as myfile:
-        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-        wr.writerow(avg_widths)
-
     df = pd.DataFrame({'num_intervals': num_intervals, 'avg_widths': avg_widths})
-    df.to_csv('avg_widths' + file_ending + '.csv')
+    df.to_csv(Path(output_directory, 'avg_widths' + file_ending + '.csv'), index=False)
 
     cluster_labels = data['Cluster'].tolist()
 
-    with open(Path(output_directory, 'cluster_labels' + file_ending + '.txt'), "w") as txt_file:
+    with open(Path(output_directory, 'cluster_labels' + file_ending + '.txt'), 'w') as txt_file:
         for i in range(len(cluster_labels)):
-            txt_file.write(str(cluster_labels[i]) + " " + str(volumes.at[i, 'Volume'])
-                           + " " + str(volumes.at[i, 'FileName']) + "\n")
+            txt_file.write(str(cluster_labels[i]) + ' ' + str(volumes.at[i, 'Volume'])
+                           + ' ' + str(volumes.at[i, 'FileName']) + '\n')
 
-    with open(Path(output_directory, 'cluster_centers' + file_ending + '.txt'), "w") as txt_file:
+    with open(Path(output_directory, 'cluster_centers' + file_ending + '.txt'), 'w') as txt_file:
         for i in range(len(natural_breaks) - 1):
-            txt_file.write(str(i) + " " + str([(natural_breaks[i] + natural_breaks[i + 1]) / 2.0]) + "\n")
+            txt_file.write(str(i) + ' ' + str([(natural_breaks[i] + natural_breaks[i + 1]) / 2.0]) + '\n')
 
-    with open(Path(output_directory, 'cluster_upper_borders' + file_ending + '.txt'), "w") as txt_file:
+    with open(Path(output_directory, 'cluster_upper_borders' + file_ending + '.txt'), 'w') as txt_file:
         for i in range(len(natural_breaks) - 1):
-            txt_file.write(str(round(natural_breaks[i + 1], 2)) + "\n")
+            txt_file.write(str(i) + ' ' + str([natural_breaks[i + 1]]) + '\n')
 
 
 def get_volume_cluster_centers_indices(cluster_centers, volume_list):

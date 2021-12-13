@@ -15,7 +15,6 @@ import cv2
 import numpy as np
 import os
 import tempfile
-import matplotlib.pyplot as plt
 
 
 def main():
@@ -106,13 +105,7 @@ def train(input_directory, frame_volumes_path, l2_regularization,
     train_data = train_data_gen.flow(train_still_images,
                                      train_volumes,
                                      batch_size=batch_size)
-    # test if augmentation works
-    # for x, y in train_data:
-    #     print(x[0])
-    #     plt.imshow(x[0])
-    #     print("y", y[0])
-    #     plt.show()
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir="logs")
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir='logs')
     early_stop_callback = tf.keras.callbacks.EarlyStopping(
         monitor='val_loss', min_delta=0.1, patience=20, verbose=0,
         mode='auto', baseline=None, restore_best_weights=True)
@@ -121,15 +114,15 @@ def train(input_directory, frame_volumes_path, l2_regularization,
     lrate = LearningRateScheduler(step_decay)
 
     # save model after each epoch
-    filepath = "data/models/saved-model-{epoch:02d}-{val_mae:.2f}"
+    filepath = 'data/models/saved-model-{epoch:02d}-{val_mae:.2f}'
     checkpoint = tf.keras.callbacks.ModelCheckpoint(
         filepath=filepath,
-        monitor="val_loss",
+        monitor='val_loss',
         verbose=0,
         save_best_only=False,
         save_weights_only=False,
-        mode="auto",
-        save_freq="epoch",
+        mode='auto',
+        save_freq='epoch',
         options=None
     )
 
@@ -192,8 +185,6 @@ def get_data(input_directory, frame_volumes_path, return_numpy_arrays=False,
         frame = np.asarray(image)
         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
         frame = frame / 255.0
-        # plt.imshow(frame)
-        # plt.show()
         if row['Split'] == 'TRAIN':
             train_still_images.append(frame)
             train_volumes.append(row['Volume'])
@@ -206,7 +197,7 @@ def get_data(input_directory, frame_volumes_path, return_numpy_arrays=False,
             val_still_images.append(frame)
             val_volumes.append(row['Volume'])
             val_filenames.append(row['ImageFileName'])
-    print("start converting")
+    print('Start converting')
     if return_numpy_arrays:
         train_still_images = np.array(train_still_images)
         train_volumes = np.array(train_volumes)
@@ -256,7 +247,7 @@ def get_resnet18_model(l2_reg, dropout=0.1, untrained_layers=0):
 # (slightly modified) source: https://sthalles.github.io/keras-regularizer/
 def add_regularization(model, regularizer=tf.keras.regularizers.l2(0.01)):
     if not isinstance(regularizer, tf.keras.regularizers.Regularizer):
-        print("Regularizer must be a subclass of tf.keras.regularizers.Regularizer")
+        print('Regularizer must be a subclass of tf.keras.regularizers.Regularizer')
         return model
 
     for layer in model.layers[:-1]:

@@ -8,10 +8,11 @@ import read_helpers as rh
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input_directory', default='../../data',
-                        help="Directory with still images.")
+    parser.add_argument('-i', '--input_directory',
+                        default='../../data/still_images',
+                        help='Directory with still images.')
     parser.add_argument('-o', '--output_directory',
-                        help="Directory to save the image features in")
+                        help='Directory to save the image features in')
     parser.add_argument('-fv', '--frame_volumes_filename',
                         default='FrameVolumes.csv',
                         help='Name of the file containing frame volumes.')
@@ -47,30 +48,25 @@ def main():
 def extract_features(model_path, hidden_layer_index, volume_cluster_labels,
                      train_dataset, output_directory):
     # load model
-    print(model_path)
-    print("Start loading model")
+    print('Start loading model')
     model = keras.models.load_model(model_path)
-    print("End loading model")
-    model.summary()
+    print('End loading model')
 
     # extract features of videos of each volume-cluster at given hidden layer index
-    print('Number of layers', len(model.layers))
     if hidden_layer_index is None:
         hidden_layer_index = len(model.layers) - 2
-    print('Hidden layer index', hidden_layer_index)
     num_volume_clusters = max(volume_cluster_labels) + 1
-    print("Calculated " + str(num_volume_clusters) + " volume clusters")
     for i in range(num_volume_clusters):
-        print("Start extracting features for volume cluster " + str(i))
+        print('Extract features for volume cluster', i)
         extracted_features = get_hidden_layer_features(
             model, train_dataset, volume_cluster_labels, i,
             hidden_layer_index)
 
         # write features to file
-        out_file = Path(output_directory, 'extracted_image_features_' + str(i) + ".txt")
-        with open(out_file, "w") as txt_file:
+        out_file = Path(output_directory, 'extracted_image_features_' + str(i) + '.txt')
+        with open(out_file, 'w') as txt_file:
             for f in range(len(extracted_features)):
-                txt_file.write(str(extracted_features[f]) + "\n")
+                txt_file.write(str(extracted_features[f]) + '\n')
 
 
 def get_hidden_layer_features(model, train_dataset, cluster_labels,
@@ -80,7 +76,6 @@ def get_hidden_layer_features(model, train_dataset, cluster_labels,
     training instances.
     @return: list of features
     """
-    print("Number of layers:", len(model.layers))
     extractor = keras.Model(inputs=[model.input],
                             outputs=model.layers[hidden_layer_index].output)
     extracted_features = []

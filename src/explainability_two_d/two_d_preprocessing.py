@@ -12,13 +12,13 @@ import argparse
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_directory', default='../../data',
-                        help="Directory with the echocardiograms.")
+                        help='Directory with the echocardiograms.')
     parser.add_argument('-o', '--output_directory',
-                        help="Directory to save still images in.")
+                        help='Directory to save still images in.')
     parser.add_argument('-m', '--metadata_filename', default='FileList.csv',
-                        help="Name of the metadata file.")
+                        help='Name of the metadata file.')
     parser.add_argument('-v', '--volumes_filename', default='VolumeTracings.csv',
-                        help="Name of the volume tracings file.")
+                        help='Name of the volume tracings file.')
     args = parser.parse_args()
 
     avi_directory = Path(args.input_directory, 'Videos')
@@ -33,7 +33,7 @@ def main():
     tf.random.set_seed(5)
     random.seed(5)
 
-    delete_incorrect_data(metadata_path, volumes_path)
+    delete_incorrect_data(metadata_path, volumes_path, output_directory)
     volume_tracings_data_frame = get_volume_tracings(metadata_path, volumes_path, output_directory)
     create_still_images(volume_tracings_data_frame, avi_directory, output_directory)
 
@@ -99,7 +99,6 @@ def get_volume_tracings(metadata_path, volumes_path, output_directory):
     volume_tracings_data_frame['ImageFileName'] = \
         volume_tracings_data_frame['FileName'].str.replace(r'.avi$', '') + '_' \
         + volume_tracings_data_frame['Frame'].astype(str) + '.png'
-    print(volume_tracings_data_frame[['FileName', 'Frame', 'AxisLength', 'ESV/EDV', 'PolyArea']])
 
     # split into train, validation and test data
     volume_tracings_data_frame['Split'] = ''
@@ -128,14 +127,17 @@ def get_volume_tracings(metadata_path, volumes_path, output_directory):
             else:  # 12.5% validation
                 volume_tracings_data_frame.at[i, 'Split'] = 'VAL'
                 volume_tracings_data_frame.at[i + 1, 'Split'] = 'VAL'
-    print(volume_tracings_data_frame.groupby('Split').count())
-    print("bigger:", counter_bigger)
-    print("smaller:", counter_smaller)
+    print('first the still image showing edv, then the one showing esv',
+          'recorded in time line of image:', counter_bigger
+          )
+    print('first the still image showing esv, then the one showing edv',
+          'recorded in time line of image:', counter_smaller
+          )
     volume_tracings_data_frame.to_csv(Path(output_directory, 'FrameVolumes.csv'), index=False)
     return volume_tracings_data_frame
 
 
-def delete_incorrect_data(metadata_path, volumes_path):
+def delete_incorrect_data(metadata_path, volumes_path, output_directory):
     file_list_data_frame = pd.read_csv(metadata_path, sep=',', decimal='.')
     volume_tracings_data_frame = pd.read_csv(volumes_path, sep=',', decimal='.')
     count = volume_tracings_data_frame.groupby(['FileName', 'Frame']).count()
@@ -144,14 +146,13 @@ def delete_incorrect_data(metadata_path, volumes_path):
     incorrect_files = list(set([x[0][:-4] for x in incorrect_files_frame['X1'].to_dict().keys()]))
     # keep file ending (avi)
     incorrect_files_avi = list(set([x[0] for x in incorrect_files_frame['X1'].to_dict().keys()]))
-    print('Number of files having too many coordinates:', len(incorrect_files))
+    print('Number of files having too many segmentation coordinates:', len(incorrect_files))
 
-    file_list_data_frame = file_list_data_frame.set_index('FileName').drop(incorrect_files)
+    # file_list_data_frame = file_list_data_frame.set_index('FileName').drop(incorrect_files)
     file_list_data_frame.to_csv(metadata_path)
     volume_tracings_data_frame = volume_tracings_data_frame.set_index('FileName').drop(incorrect_files_avi)
     volume_tracings_data_frame.to_csv(volumes_path)
-    incorrect_files_frame.to_csv('incorrect.csv')
-    print('saved')
+    incorrect_files_frame.to_csv(Path(output_directory, 'incorrect.csv'), index=False)
 
 
 def calc_axis_length(df):

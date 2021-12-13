@@ -2,16 +2,17 @@ import argparse
 import numpy as np
 import os
 from pathlib import Path
-from two_D_resnet import get_data
+from two_d_resnet import get_data
 import read_helpers as rh
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input_directory', default='../../data',
-                        help="Directory with still images.")
+    parser.add_argument('-i', '--input_directory',
+                        default='../../data/still_images',
+                        help='Directory with still images.')
     parser.add_argument('-o', '--output_directory',
-                        help="Directory to save prototypes and evaluations in")
+                        help='Directory to save prototypes and evaluations in')
     parser.add_argument('-p', '--prototypes_filename', default='prototypes.txt',
                         help='Name of file to save prototypes in')
     parser.add_argument('-fv', '--frame_volumes_filename',
@@ -28,7 +29,7 @@ def main():
     args = parser.parse_args()
 
     if args.output_directory is None:
-        output_directory = Path(args.input_directory, 'image_clusters')
+        output_directory = Path(args.input_directory, 'results')
     else:
         output_directory = Path(args.output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
@@ -51,27 +52,30 @@ def main():
 def calculate_prototypes(still_images, file_names, image_clusters_directory,
                          output_file, get_images=True):
     num_volume_clusters = int(len(os.listdir(image_clusters_directory)) / 2)
-    prototypes, volume_cluster_sizes, volume_cluster_means, volume_cluster_stds, image_cluster_sizes, image_cluster_means, image_cluster_stds = get_kmedoids_prototypes_data(
-        num_volume_clusters,
-        image_clusters_directory,
-        None,
-        None,
-        None
+    prototypes, volume_cluster_sizes, volume_cluster_means, volume_cluster_stds, image_cluster_sizes, image_cluster_means, image_cluster_stds \
+        = get_kmedoids_prototypes_data(
+            num_volume_clusters,
+            image_clusters_directory
     )
 
-    print("--------------")
+    print('--------------')
     for i in range(len(volume_cluster_sizes)):
-        print("Volume cluster", i, ": size", volume_cluster_sizes[i], "mean",
-              volume_cluster_means[i], "stds", volume_cluster_stds[i])
+        print('Volume cluster', i,
+              ': size', volume_cluster_sizes[i],
+              ', mean', volume_cluster_means[i],
+              ', stds', volume_cluster_stds[i])
         for j in range(len(image_cluster_sizes[i])):
-            print("Image cluster", j, ": size", image_cluster_sizes[i][j], "mean", image_cluster_means[i][j], "stds", image_cluster_stds[i][j])
-        print("--------------")
+            print('Image cluster', j,
+                  ': size', image_cluster_sizes[i][j],
+                  ', mean', image_cluster_means[i][j],
+                  ', stds', image_cluster_stds[i][j])
+        print('--------------')
 
     if get_images:
         prototypes = get_images_of_prototypes(prototypes, still_images, file_names)
 
-    print("Prototypes calculated")
-    with open(output_file, "w") as txt_file:
+    print('Prototypes calculated')
+    with open(output_file, 'w') as txt_file:
         for cp in prototypes:
             for i, p in enumerate(prototypes[cp]):
                 line = str(cp) + ' ' \
@@ -95,15 +99,12 @@ def get_images_of_prototypes(prototypes, still_images, file_names):
     return prototypes
 
 
-def get_kmedoids_prototypes_data(num_volume_clusters, image_clusters_directory,
-                                 metadata_filename, train_dataset):
+def get_kmedoids_prototypes_data(num_volume_clusters, image_clusters_directory):
     """
     Calculate prototypes of image clustering created by kmedoids, where a
     prototype is defined as the medoid of an image cluster (i.e. it is an existing image).
     @param num_volume_clusters: number of clusters produced while clustering by volume
     @param image_clusters_directory: directory containing image cluster labels
-    @param metadata_filename: name of file containing metadata
-    @param train_dataset: dataset used for training/calculating clusters
     @return: Returns map of prototypes, mapping from volume-cluster-index to a list
     of prototypes (one for each image cluster belonging to that volume cluster)
     """

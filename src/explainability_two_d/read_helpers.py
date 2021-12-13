@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import ast
-import matplotlib.pyplot as plt
 from similarity import normalize_polygon, rotate_polygon, angles_to_centroid
 
 
@@ -29,9 +28,9 @@ def read_cluster_labels(cluster_file):
     cluster_labels = []
     volumes = []
     file_names = []
-    with open(cluster_file, "r") as txt_file:
+    with open(cluster_file, 'r') as txt_file:
         for line in txt_file:
-            line_split = line.split(" ")
+            line_split = line.split(' ')
             cluster_labels.append(int(line_split[0]))
 
             volumes.append(float(line_split[1]))
@@ -41,14 +40,14 @@ def read_cluster_labels(cluster_file):
 
 def read_extracted_features(file_path):
     extracted_features = []
-    with open(file_path, "r") as txt_file:
+    with open(file_path, 'r') as txt_file:
         for line in txt_file:
-            if not line.startswith("tf.Tensor"):
-                if line.startswith("[["):
+            if not line.startswith('tf.Tensor'):
+                if line.startswith('[['):
                     image_features = []
-                    line = line.strip("[")
-                if line.__contains__("shape"):
-                    line = line.split("]")[0]
+                    line = line.strip('[')
+                if line.__contains__('shape'):
+                    line = line.split(']')[0]
                     image_features.extend([float(v) for v in line.split()])
                     extracted_features.append(image_features)
                 else:
@@ -64,7 +63,7 @@ def read_image_clusters(cluster_labels_file, image_features_file):
     image_cluster_labels, volume_file, file_names = \
         read_cluster_labels(cluster_labels_file)
     num_clusters = max(image_cluster_labels) + 1
-    print(str(cluster_labels_file), " num clusters: ", num_clusters)
+    print(str(cluster_labels_file), ' num clusters: ', num_clusters)
     for i in range(num_clusters):
         cluster_features.append([])
 
@@ -82,7 +81,7 @@ def read_image_cluster_centers(centers_file_path, image_known=True):
         i = 0
     else:
         i = -2
-    with open(centers_file_path, "r") as txt_file:
+    with open(centers_file_path, 'r') as txt_file:
         for line in txt_file:
             line_split = line.split()
             if new_center:
@@ -93,16 +92,16 @@ def read_image_cluster_centers(centers_file_path, image_known=True):
                 else:
                     volume = None
                     file_name = None
-                if len(line_split[3 + i].strip("[")) == 0:
+                if len(line_split[3 + i].strip('[')) == 0:
                     features = []
                 else:
-                    features = [float(line_split[3 + i].strip("["))]
+                    features = [float(line_split[3 + i].strip('['))]
                 for f in line_split[4 + i:]:
                     features.append(float(f))
             else:
                 end = len(line_split) - 1
-                if line_split[end].endswith("]"):
-                    line_split[end] = line_split[end].strip("]")
+                if line_split[end].endswith(']'):
+                    line_split[end] = line_split[end].strip(']')
                     if len(line_split[end]) == 0:
                         line_split.pop()
                     for f in line_split:
@@ -117,10 +116,10 @@ def read_image_cluster_centers(centers_file_path, image_known=True):
 
 def read_volume_cluster_centers(centers_file_path):
     cluster_centers = []
-    with open(centers_file_path, "r") as txt_file:
+    with open(centers_file_path, 'r') as txt_file:
         for line in txt_file:
             line_split = line.split()
-            volume = line_split[1].strip("[]")
+            volume = line_split[1].strip('[]')
             cluster_centers.append(float(volume))
     return cluster_centers
 
@@ -131,7 +130,7 @@ def read_prototypes(centers_file_path, volume_tracings_file_path=None,
     new_center = True
     volume_cluster_index = 0
     prototypes[volume_cluster_index] = []
-    with open(centers_file_path, "r") as txt_file:
+    with open(centers_file_path, 'r') as txt_file:
         for line in txt_file:
             line_split = line.split()
             if new_center:
@@ -147,16 +146,16 @@ def read_prototypes(centers_file_path, volume_tracings_file_path=None,
                     file_name = line_split[3]
                 else:
                     file_name = None
-                if len(line_split[4].strip("[")) == 0:
+                if len(line_split[4].strip('[')) == 0:
                     features = []
                 else:
-                    features = [float(line_split[4].strip("["))]
+                    features = [float(line_split[4].strip('['))]
                 for f in line_split[5:]:
                     features.append(float(f))
             else:
                 end = len(line_split) - 1
-                if line_split[end].endswith("]"):
-                    line_split[end] = line_split[end].strip("]")
+                if line_split[end].endswith(']'):
+                    line_split[end] = line_split[end].strip(']')
                     if len(line_split[end]) == 0:
                         line_split.pop()
                     for f in line_split:

@@ -1,29 +1,23 @@
-from __future__ import division  # to avoid integer devision problem
+from __future__ import division
 import argparse
-import math
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import read_helpers as rh
-from shapely.geometry import Polygon
-from dtw import *
 from pathlib import Path
 from tensorflow import keras
-from sklearn.preprocessing import StandardScaler, Normalizer
-from scipy.spatial.distance import euclidean
-from sklearn.metrics.pairwise import cosine_similarity
 from skimage.metrics import structural_similarity, peak_signal_noise_ratio
 from prototypes_calculation import get_images_of_prototypes
-from two_D_resnet import get_data
+from two_d_resnet import get_data
 import similarity as sim
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input_directory', default='../../data',
-                        help="Directory with still images.")
+    parser.add_argument('-i', '--input_directory',
+                        default='../../data/still_images',
+                        help='Directory with still images.')
     parser.add_argument('-o', '--output_directory',
-                        help="Directory to save prototypes and evaluations in")
+                        help='Directory to save prototypes and evaluations in.')
     parser.add_argument('-p', '--prototypes_filename', default='prototypes.txt',
                         help='Name of file containing prototypes')
     parser.add_argument('-re', '--rotation_extent', type=float, default=np.pi/8)
@@ -77,14 +71,14 @@ def main():
     print('Data loaded')
 
     # get volume cluster centers
-    volume_cluster_centers = rh.read_volume_cluster_centers(args.volume_cluster_centers_file)
+    # volume_cluster_centers = rh.read_volume_cluster_centers(args.volume_cluster_centers_file)
 
     # get volume cluster borders
     volume_cluster_borders = rh.read_volume_cluster_centers(args.volume_cluster_borders_file)
 
     # validate clustering -> by validating prototypes
     evaluate_prototypes(
-        volume_cluster_centers, volume_cluster_borders,
+        volume_cluster_borders,
         prototypes, volume_tracings_dict,
         train_still_images, train_volumes, train_filenames,
         test_still_images, test_volumes, test_filenames,
@@ -92,7 +86,7 @@ def main():
         args.output_directory)
 
 
-def evaluate_prototypes(volume_cluster_centers, volume_cluster_borders,
+def evaluate_prototypes(volume_cluster_borders,
                         prototypes, volume_tracings_dict,
                         train_still_images, train_volumes, train_filenames,
                         test_still_images, test_volumes, test_filenames,
@@ -113,10 +107,8 @@ def evaluate_prototypes(volume_cluster_centers, volume_cluster_borders,
     model = keras.models.load_model(model_path)
     print('End loading model')
 
-    print('Number of layers', len(model.layers))
     if hidden_layer_index is None:
         hidden_layer_index = len(model.layers) - 2
-    print('Hidden layer index', hidden_layer_index)
     predicting_model = keras.Model(inputs=[model.input],
                                    outputs=model.layers[len(model.layers) - 1].output)
     extractor = keras.Model(inputs=[model.input],
@@ -126,43 +118,34 @@ def evaluate_prototypes(volume_cluster_centers, volume_cluster_borders,
     prototype_still_images = []
     prototype_volumes = []
     prototype_filenames = []
-    print("----------------")
-    print("Number of volume clusters:", len(prototypes))
     for i in range(len(prototypes)):
-        print("Number of image clusters in volume cluster", i, ":", len(prototypes[i]))
         for j in range(len(prototypes[i])):
             prototype_still_images.append(prototypes[i][j].image)
             prototype_volumes.append(prototypes[i][j].volume)
             prototype_filenames.append(prototypes[i][j].file_name)
 
-    similarity_measures = ['euclidean', 'cosine', 'ssim', 'psnr']
-
-    calculate_distances(volume_cluster_centers, volume_cluster_borders,
+    calculate_distances(volume_cluster_borders,
                         prototype_still_images, prototype_volumes, prototype_filenames,
                         prototypes, volume_tracings_dict,
                         predicting_model, extractor,
-                        output_directory, similarity_measures,
-                        data='prototypes')
-    calculate_distances(volume_cluster_centers, volume_cluster_borders,
+                        output_directory, data='prototypes')
+    calculate_distances(volume_cluster_borders,
                         test_still_images, test_volumes, test_filenames,
                         prototypes, volume_tracings_dict,
                         predicting_model, extractor,
-                        output_directory, similarity_measures,
-                        data='test')
-    calculate_distances(volume_cluster_centers, volume_cluster_borders,
+                        output_directory, data='test')
+    calculate_distances(volume_cluster_borders,
                         train_still_images, train_volumes, train_filenames,
                         prototypes, volume_tracings_dict,
                         predicting_model, extractor,
-                        output_directory, similarity_measures,
-                        data='train')
+                        output_directory, data='train')
 
 
-def calculate_distances(volume_cluster_centers, volume_cluster_borders,
+def calculate_distances(volume_cluster_borders,
                         still_images, volumes, file_names,
                         prototypes, volume_tracings_dict,
                         predicting_model, extractor,
-                        output_directory, similarity_measures,
-                        data='test'):
+                        output_directory, data='test'):
     # save prototypes which are most similar
     chosen_prototypes = []
 
@@ -203,10 +186,11 @@ def calculate_distances(volume_cluster_centers, volume_cluster_borders,
             current_prototypes = current_prototypes + prototypes[volume_cluster_index + 1]
 
         # get most similar prototype of volume cluster
-        # calculate distances/similarities regarding euclidean distance and cosine similarity
+        # calculate distances/similarities regarding euclidean distance
+        # and cosine similarity
         euc_prototype, euc_index, euc_diff_features, euc_iou, euc_angle_diff, \
             cosine_prototype, cosine_index, cosine_diff_features, cosine_iou, cosine_angle_diff = \
-            get_most_similar_prototype(current_prototypes, image, volume_tracings_dict)
+            sim.get_most_similar_prototype(current_prototypes, image, volume_tracings_dict)
 
         # EUCLIDEAN DISTANCE
         chosen_prototypes[i]['euclidean_prototype'] = euc_prototype.file_name
@@ -252,6 +236,7 @@ def calculate_distances(volume_cluster_centers, volume_cluster_borders,
         chosen_prototypes[i]['psnr_iou'] = 0
         chosen_prototypes[i]['psnr_diff_angles'] = 0
 
+    print('Closest prototypes selected for all', data, 'instances')
     cp = pd.DataFrame(chosen_prototypes)
     prototypes_path = Path(output_directory, data + '_chosen_prototypes.csv')
     cp.to_csv(prototypes_path, index=False)
