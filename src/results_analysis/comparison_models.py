@@ -10,6 +10,9 @@ def main():
     parser.add_argument('-i', '--input_directories', nargs='+',
                         default=['../../data/model_evaluations/metrics_history'],
                         help='Directories with model evaluations.')
+    parser.add_argument('-o', '--output_directory',
+                        default='../../data',
+                        help='Directory for saving model comparison.')
     args = parser.parse_args()
     input_directories = args.input_directories
 
@@ -20,10 +23,10 @@ def main():
     plot_metric_over_epochs(val_mae, train_mae, metric='MAE')
 
     # compare metric values over epochs for (multiple) model(s)
-    compare_model_histories(input_directories)
+    compare_model_histories(input_directories, args.output_directory)
 
 
-def compare_model_histories(input_directories):
+def compare_model_histories(input_directories, output_directory):
     model_eval_folders = input_directories
     model_evals = []
     train_mae_histories = []
@@ -72,7 +75,7 @@ def compare_model_histories(input_directories):
 
     model_evals = pd.DataFrame(model_evals)
     print(model_evals[['model_name', 'test_mae', 'train_mae']])
-    model_evals.to_csv('model_comparison.csv')
+    model_evals.to_csv(Path(output_directory, 'model_comparison.csv'))
 
 
 def plot_metric_over_epochs(metric_values_val,

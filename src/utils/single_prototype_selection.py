@@ -1,6 +1,6 @@
 import argparse
 import numpy as np
-import read_helpers as rh
+from src.utils import read_helpers as rh
 import cv2
 from PIL import Image
 from pathlib import Path

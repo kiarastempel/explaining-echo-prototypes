@@ -171,21 +171,26 @@ def read_prototypes(centers_file_path, volume_tracings_file_path=None,
         volume_tracings_data_frame = pd.read_csv(volume_tracings_file_path)
         for volume_cluster_prototypes in prototypes.values():
             for prototype in volume_cluster_prototypes:
-                volume = volume_tracings_data_frame.loc[volume_tracings_data_frame['ImageFileName'] == prototype.file_name]['Volume'].iloc[0]
+                volume = volume_tracings_data_frame.loc[
+                    volume_tracings_data_frame['ImageFileName'] == prototype.file_name]['Volume'].iloc[0]
                 prototype.volume = volume
     return prototypes
 
 
-def get_segmentation_coordinates_of_prototypes(prototypes, volume_tracings_dict):
+def get_segmentation_coordinates_of_prototypes(prototypes,
+                                               volume_tracings_dict):
     for i in range(len(prototypes)):
         for j in range(len(prototypes[i])):
             file_name = prototypes[i][j].file_name
-            prototypes[i][j].segmentation = {'X': ast.literal_eval(volume_tracings_dict[file_name]['X']),
-                                             'Y': ast.literal_eval(volume_tracings_dict[file_name]['Y'])}
+            prototypes[i][j].segmentation = {
+                'X': ast.literal_eval(volume_tracings_dict[file_name]['X']),
+                'Y': ast.literal_eval(volume_tracings_dict[file_name]['Y'])}
     return prototypes
 
 
-def get_normalized_rotations_of_prototypes_with_angles(prototypes, rotation_extent, num_rotations):
+def get_normalized_rotations_of_prototypes_with_angles(prototypes,
+                                                       rotation_extent,
+                                                       num_rotations):
     for i in range(len(prototypes)):
         for j in range(len(prototypes[i])):
             print('file', prototypes[i][j].file_name)
@@ -205,4 +210,3 @@ def get_normalized_rotations_of_prototypes_with_angles(prototypes, rotation_exte
                 rotated_features.append(features)
             prototypes[i][j].normalized_rotations = rotated_features
     return prototypes
-

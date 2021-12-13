@@ -2,13 +2,12 @@ from __future__ import division
 import argparse
 import numpy as np
 import pandas as pd
-import read_helpers as rh
+from src.utils import read_helpers as rh, similarity as sim
 from pathlib import Path
 from tensorflow import keras
 from skimage.metrics import structural_similarity, peak_signal_noise_ratio
 from prototypes_calculation import get_images_of_prototypes
-from two_d_resnet import get_data
-import similarity as sim
+from src.model.two_d_resnet import get_data
 
 
 def main():

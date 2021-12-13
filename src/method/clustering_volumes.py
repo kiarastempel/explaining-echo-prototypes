@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from tensorflow import keras
-from two_d_resnet import get_data
-import clustering as cl
+from src.model.two_d_resnet import get_data
+from src.utils import clustering as cl
 
 
 def main():

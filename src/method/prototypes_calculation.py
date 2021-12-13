@@ -2,8 +2,8 @@ import argparse
 import numpy as np
 import os
 from pathlib import Path
-from two_d_resnet import get_data
-import read_helpers as rh
+from src.model.two_d_resnet import get_data
+from src.utils import read_helpers as rh
 
 
 def main():

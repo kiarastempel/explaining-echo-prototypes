@@ -4,8 +4,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.preprocessing import StandardScaler, Normalizer
 from sklearn.decomposition import PCA
-import read_helpers as rh
-import clustering as cl
+from src.utils import read_helpers as rh, clustering as cl
 
 
 def main():
