@@ -1,7 +1,0 @@
-numpy
-pydicom
-opencv-python
-pillow
-pandas
-tensorflow-addons
-tqdm

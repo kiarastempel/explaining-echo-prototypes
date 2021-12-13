@@ -1,7 +1,0 @@
-FROM tensorflow/tensorflow:latest-gpu
-
-RUN apt-get update && apt-get install libgl1-mesa-glx -y
-COPY requirements_docker.txt .
-RUN pip3 install -r requirements_docker.txt
-WORKDIR /src
-CMD ["python", "train.py"]
