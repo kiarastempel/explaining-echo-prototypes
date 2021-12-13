@@ -4,7 +4,7 @@ This repository contains a method for calculating prototypes of
 echocardiographic still images in order to allow a validation of
 neural network outputs by comparing a new input to an already
 labeled similar prototypical still image. Here, the prediction
-of the blood volume of the left ventricle is considered, but it can
+of the blood volume of the left ventricle of the heart is considered, but it can
 be any other predicted parameter.
 
 In order to apply the method using a dataset which consists of echocardiograms
